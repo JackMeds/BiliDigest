@@ -1,0 +1,24 @@
+# Python 缓存
+__pycache__/
+*.py[cod]
+
+# 虚拟环境
+.venv/
+env/
+venv/
+
+# 用户隐私数据 (绝对不能传!)
+.user_session.json
+.env
+cookies.txt
+*.pkl
+
+# 下载的内容
+output/*
+!output/.gitkeep
+downloads/
+
+# IDE 配置
+.vscode/
+.idea/
+.DS_Store

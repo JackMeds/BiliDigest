@@ -1,0 +1,9 @@
+yt-dlp>=2024.0.0
+faster-whisper>=1.0.0
+qrcode[pil]>=7.4.0
+requests>=2.31.0
+openai>=1.0.0
+python-dotenv>=1.0.0
+transformers>=4.38.0
+torch>=2.0.0
+torchaudio>=2.0.0
