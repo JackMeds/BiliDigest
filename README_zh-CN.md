@@ -1,7 +1,7 @@
-# Video-Skill-Transcriber 🎥
+# Video-Skill-Transcriber 🧠
 
-> 通用视频处理工具集：下载、转录，为 AI Agent 而生。
-> 支持 Bilibili / YouTube / 本地文件
+> **不仅仅是下载器，更是 AI 的"眼睛"和"耳朵"。**
+> 让 Claude/ChatGPT 具备视频理解能力，实现自动摘要、思维导图构建、知识库沉淀。
 
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
@@ -11,37 +11,50 @@
 
 ---
 
-## 目录 (Table of Contents)
+## 📖 目录
 
-- [简介](#简介)
-- [核心功能](#核心功能)
-- [效果展示](#效果展示)
-- [安装指南](#安装指南)
-- [快速开始](#快速开始)
-- [B站专属教程 (Bilibili Tutorial)](#b站专属教程-bilibili-tutorial)
-- [给 Agent 使用 (Skills)](#给-agent-使用-skills)
-- [许可证](#许可证)
+- [为什么需要这个工具](#为什么需要这个工具)
+- [核心能力](#核心能力)
+- [AI 学习场景示例](#ai-学习场景示例)
+- [安装与配置](#安装与配置)
+- [使用指南](#使用指南)
+- [B站深度学习流](#b站深度学习流)
+- [给 Agent 集成 (Skills)](#给-agent-集成-skills)
 
 ---
 
-## 简介
+## 为什么需要这个工具
 
-Video-Skill-Transcriber 是一个功能强大的命令行工具集，旨在让 AI Agent (如 Claude, ChatGPT) 能够轻松地与视频内容交互。它集成了全平台的视频下载能力和高精度的本地/在线语音转录引擎。
+在 AI 时代，视频是最大的知识黑洞。虽然 AI 文本能力很强，但它无法直接"看"懂 B 站的硬核教程或 YouTube 的深度讲座。
 
-## 核心功能
+**Video-Skill-Transcriber** 的出现，就是为了打通 **视频 -> AI** 的最后一步。它不仅仅是一个下载转录工具，更是一套**专为 AI 学习流程设计的 Skills**。
 
-1.  **全平台下载**: 基于强大的 [yt-dlp](https://github.com/yt-dlp/yt-dlp)，支持 YouTube, Bilibili, TikTok 等数千个网站。
-2.  **灵活鉴权**: 支持自动读取 Chrome/Edge/Firefox 浏览器 Cookie，轻松搞定会员/年龄限制视频。
-3.  **多引擎转录**:
-    *   **Whisper (Local)**: 速度快，通用性强。
-    *   **Qwen3-ASR (Local)**: 阿里通义千问语音模型，效果卓越。
-    *   **OpenAI API**: 支持调用 whisper-1 或 DeepSeek/Qwen 在线接口。
+通过本工具，你也让 Agent 拥有了：
+1.  **全网视频获取能力** (Bilibili/YouTube/TikTok...)
+2.  **高精度听觉能力** (Whisper/Qwen3/OpenAI) 
+3.  **知识萃取的基础** (从视频到结构化文本)
+
+## 核心能力
+
+- **🎥 视频知识化**: 将长达数小时的视频课程，转换为 AI 可处理的精确文本。
+- **🤖 Agent 技能化**: 提供标准的 `.agent/skills` 接口，让 Claude/GPT 自主调用下载和转录。
+- **📚 批量学习流**: 支持一键处理 "稍后再看" 列表，通过 AI 自动生成每日学习摘要。
+- **🧠 本地隐私**: 支持纯本地模型 (Whisper/Qwen)，由于学习资料可能涉及隐私，本地处理更安全。
+
+## AI 学习场景示例
+
+有了这个工具，你的 AI Agent 可以做到：
+
+*   **🎓 自动课程笔记**: "帮我把这两个小时的李宏毅深度学习课程转成 Markdown 笔记，提取核心知识点。"
+*   **📝 会议/访谈整理**: "把这段访谈录音转录，并分析受访者的核心观点和潜在情绪。"
+*   **🗺️ 知识图谱构建**: "下载这 10 个关于 'RAG' 的 B 站视频，梳理出技术发展路线图。"
+*   **🔍 跨语言学习**: "下载这个英文教程，转录并翻译成中文概览。"
 
 ## 效果展示
 
 ![Terminal Demo](assets/terminal_demo.png)
 
-## 安装指南
+## 安装与配置
 
 1.  **克隆仓库**:
     ```bash
@@ -51,90 +64,55 @@ Video-Skill-Transcriber 是一个功能强大的命令行工具集，旨在让 A
 
 2.  **安装依赖**:
     ```bash
-    # 推荐使用虚拟环境
     python3 -m venv .venv
-    source .venv/bin/activate  # Windows 用户: .venv\Scripts\activate
-
+    source .venv/bin/activate  # Windows: .venv\Scripts\activate
     pip install -r requirements.txt
     ```
-    *(注: 即使不使用虚拟环境，也能直接运行，但推荐隔离环境)*
+    *(需安装 [FFmpeg](https://ffmpeg.org/))*
 
-    > **前置要求**: 请确保系统已安装 [FFmpeg](https://ffmpeg.org/) (用于音频格式转换)。
+3.  **(可选) 配置在线模型**:
+    如需使用 OpenAI/DeepSeek 能力，复制 `.env.example` 到 `.env` 并填入 Key。
 
-3.  **(可选) 配置 API**:
-    如果你想使用在线转录功能，请复制 `.env.example` 为 `.env` 并填入你的 API Key。
+## 使用指南
 
-## 快速开始
-
-所有的工具都支持通过 `python -m tools.xxx` 方式调用。
-
-### 1. 下载视频 (通用)
-
+### 1. 通用视频获取
+让 AI "看到" 视频内容：
 ```bash
-# 下载 YouTube 视频
-python -m tools.download "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
-
-# 使用浏览器 Cookie 下载 (解决登录限制)
-python -m tools.download "URL" --cookies-browser chrome
+python -m tools.download "https://www.bilibili.com/video/BVxxx" --cookies-browser chrome
 ```
 
-### 2. 音频转录
-
+### 2. 把视频"变成"知识 (转录)
 ```bash
-# 使用本地 Whisper 模型 (默认)
-python -m tools.transcribe "output/video.m4a"
-
-# 使用 Qwen3-ASR 模型
+# 本地模型 (推荐用于隐私内容)
 python -m tools.transcribe "output/video.m4a" -m Qwen/Qwen3-ASR-0.6B
 
-# 使用 OpenAI API (需配置 .env)
+# 在线 API (速度快，适合总结)
 python -m tools.transcribe "output/video.m4a" -m openai
 ```
 
 ---
 
-## B站专属教程 (Bilibili Tutorial)
+## B站深度学习流
 
-针对 Bilibili 用户，我们提供了一套深度的玩法，助你高效获取知识。
+专为 Bilibili 重度学习者打造的自动化流：
 
-### 场景 1: 获取“稍后再看”并批量转录
-
-这对于想把收藏的视频变成文字笔记非常有帮助。
-
-1.  **登录 B 站**:
-    由于 API 限制，这里推荐使用我们的扫码工具登录一次，Session 会自动保存。
+1.  **扫码登录** (只需一次):
     ```bash
     python -m tools.auth
     ```
-    *(按照终端提示扫码即可)*
-
-2.  **获取列表**:
+2.  **批量消化 "稍后再看"**:
+    不再让"稍后再看"变成"稍后不看"。一键拉取前 10 个视频进行转录：
     ```bash
     python -m tools.list --watch-later --limit 10
-    ```
-    这会将你稍后再看列表的前 10 个视频保存为 `batch_list.json`。
-
-3.  **批量处理**:
-    我们提供了一个批量脚本，自动读取 json 并执行下载+转录。
-    ```bash
     python -m tools.batch_run
     ```
-    *(你需要确保 `batch_run.py` 存在于 tools 目录，或者参考 `batch_run.py` 的用法)*
-
-### 场景 2: 下载大会员高清/收藏夹视频
-
-如果你有大会员权限，带上 Cookie 下载可以获得更高画质，或者下载仅限会员观看的内容。
-
-```bash
-# 自动读取你 Chrome 浏览器登录的 B 站 Cookie
-python -m tools.download "https://www.bilibili.com/video/BVxxx" --cookies-browser chrome
-```
+    配合 AI Agent，你可以让它每天早上为你推送这 10 个视频的**一句话总结**。
 
 ---
 
-## 给 Agent 使用 (Skills)
+## 给 Agent 集成 (Skills)
 
-如果你在构建 AI Agent (如使用 Claude Desktop 或其他框架)，可以将 `skills/VIDEO_SKILL.md` 的内容复制给 Agent 作为 System Prompt 或 Skill Definition。这样 Agent 就能理解如何自主调用这些工具了。
+将 [`skills/VIDEO_SKILL.md`](skills/VIDEO_SKILL.md) 的内容提供给你的 AI Agent (如 Cursor, Claude Desktop, AutoGPT)。它将学会如何自主操作这些工具，成为你的**全能学习助手**。
 
 ## 许可证
 
