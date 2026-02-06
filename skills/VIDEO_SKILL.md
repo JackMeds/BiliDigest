@@ -1,50 +1,52 @@
-# Video Skill Transcriber Capabilities
+# Video Transcriber Skill
 
-This is a local toolkit allowing the AI to download and transcribe videos from the web (Bilibili, YouTube, etc.) or local files.
+You have access to a local toolkit for downloading and transcribing videos. Use this skill when the user asks to process video content from URLs (YouTube/Bilibili) or local files.
 
-## Available Tools (located in `tools/`)
+## 🛠️ Tools
 
-### 1. Download Tool (`tools.download`)
-- **Command**: `python -m tools.download "URL" [options]`
-- **Function**: Downloads video/audio from the given URL.
-- **Key Options**:
-  - `--cookies-browser [chrome|edge]`: Use cookies from a local browser (crucial for premium/login-required content on YT/Bilibili).
-  - `--video`: Download video file (defaults to audio-only for transcription efficiency).
-- **Output**: Files are saved to the `output/` directory.
+Execute these tools using `python -m <tool_name> <args>`.
 
-### 2. Transcribe Tool (`tools.transcribe`)
-- **Command**: `python -m tools.transcribe "path/to/file.ext" [options]`
-- **Function**: Transcribes audio/video files to text (.txt) and subtitles (.srt).
-- **Models**:
-  - Default: Local Whisper (balance of speed/accuracy).
-  - `-m Qwen/Qwen3-ASR-0.6B`: Optimized for Chinese speech.
-  - `-m openai`: Uses OpenAI API (requires `.env` config).
+### 1. Download Video
+**Command**: `tools.download`
+**Purpose**: Download video or audio from a URL.
+**Arguments**:
+- `URL`: The video link (supports YouTube, Bilibili, TikTok, etc.)
+- `--cookies-browser <browser>`: (Optional) Use 'chrome' or 'edge' cookies for age-gated/premium content.
+- `--video`: (Optional) Download video file (default is audio-only for transcription).
 
-### 3. Bilibili Auth (`tools.auth`)
-- **Command**: `python -m tools.auth`
-- **Function**: Bilibili-specific QR Code login. (For YouTube, use `--cookies-browser`).
+**Example**:
+```bash
+python -m tools.download "https://www.bilibili.com/video/BVxxx" --cookies-browser chrome
+```
 
-## Workflow Examples
+### 2. Transcribe Audio
+**Command**: `tools.transcribe`
+**Purpose**: Convert audio/video files to text and subtitles.
+**Arguments**:
+- `FILE_PATH`: Path to the file (usually in `output/` directory).
+- `-m <model>`: 
+  - `openai`: Fast, requires `.env`.
+  - `Qwen/Qwen3-ASR-0.6B`: High accuracy for Chinese.
+  - (Default): Local Whisper.
 
-**User**: "Summarize this YouTube video: https://youtu.be/..."
+**Example**:
+```bash
+python -m tools.transcribe "output/video.m4a" -m openai
+```
 
-1. **Agent**: Download audio:
-   ```bash
-   python -m tools.download "https://youtu.be/..."
-   ```
-2. **Agent**: Transcribe the downloaded file:
-   ```bash
-   python -m tools.transcribe "output/video_title.m4a"
-   ```
-3. **Agent**: Read `output/video_title.txt` and summarize.
+### 3. Bilibili Authentication
+**Command**: `tools.auth`
+**Purpose**: Log in to Bilibili via QR code to access private "Watch Later" lists.
 
-**User**: "Extract text from this Bilibili video using Qwen model."
+## 🧠 Workflow Patterns
 
-1. **Agent**: Download:
-   ```bash
-   python -m tools.download "https://bilibili.com/..." --cookies-browser chrome
-   ```
-2. **Agent**: Transcribe:
-   ```bash
-   python -m tools.transcribe "output/video.m4a" -m Qwen/Qwen3-ASR-0.6B
-   ```
+### Pattern A: "Summarize this video"
+1. **Download**: `python -m tools.download "<URL>"`
+2. **Observe**: Capture the output filename (e.g., `output/title.m4a`).
+3. **Transcribe**: `python -m tools.transcribe "output/title.m4a"`
+4. **Action**: Read the generated `.txt` file and summarize it for the user.
+
+### Pattern B: "Bilibili Watch Later Analysis"
+1. **Fetch**: `python -m tools.list --watch-later --limit 5`
+2. **Batch**: `python -m tools.batch_run`
+3. **Action**: Analyze the transcripts in `output/`.

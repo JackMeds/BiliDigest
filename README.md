@@ -14,7 +14,7 @@
 ## 📖 Table of Contents
 
 - [The Problem: Information Overload](#the-problem-information-overload)
-- [Capabilities](#capabilities)
+- [Features](#features)
 - [Installation](#installation)
 - [Usage](#usage)
 - [Bilibili Workflow](#bilibili-workflow)
@@ -32,7 +32,7 @@ You've saved thousands of high-quality tutorials, lectures, and talks, thinking 
 
 **Turn "Watch Later" into "Knowledge Acquired".**
 
-## Capabilities
+## Features
 
 | Feature | Description | Note |
 | :--- | :--- | :--- |
