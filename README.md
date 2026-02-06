@@ -14,8 +14,7 @@
 ## 📖 Table of Contents
 
 - [The Problem: Information Overload](#the-problem-information-overload)
-- [The Solution](#the-solution)
-- [How It Works](#how-it-works)
+- [Capabilities](#capabilities)
 - [Installation](#installation)
 - [Usage](#usage)
 - [Bilibili Workflow](#bilibili-workflow)
@@ -29,26 +28,19 @@ Have you ever looked at your **YouTube "Watch Later"** or **Bilibili "Favorites"
 
 You've saved thousands of high-quality tutorials, lectures, and talks, thinking "I'll learn this later." But "later" never comes because watching video is time-consuming.
 
-While Multimodal AI (like Gemini/GPT-4o) can watch *one* video, it cannot efficiently process your **entire backlog of 1,000 videos**. It's too slow and too expensive.
-
-## The Solution
-
-**Video-Skill-Transcriber** is built to solve exactly this.
-
-It acts as a pipeline tool for your AI Agent. It autonomously batches download and transcribes your backlog, converting hours of video into structured text that AI can digest in seconds.
+**Video-Skill-Transcriber** is the solution. It autonomously batches download and transcribes your backlog, converting hours of video into structured text that AI can digest in seconds.
 
 **Turn "Watch Later" into "Knowledge Acquired".**
 
-## Core Capabilities
+## Capabilities
 
-- **🎥 Batch Processing**: Automatically handle playlists or "Watch Later" lists from Bilibili/YouTube.
-- **🤖 Agent Skills**: Standardized interface for AI Agents to autonomously fetch knowledge.
-- **📝 High-Fidelity ASR**: Uses Whisper, Qwen3 (Chinese optimized), or OpenAI API for accurate transcripts.
-- **🧠 Privacy First**: Run locally to keep your learning habits private.
-
-## Demo
-
-![Terminal Demo](assets/terminal_demo.png)
+| Feature | Description | Note |
+| :--- | :--- | :--- |
+| **Universal Download** | Supports YouTube, Bilibili, TikTok, etc. | Powered by `yt-dlp` |
+| **Multi-Engine ASR** | Whisper (Local), Qwen3 (Chinese Optimized), OpenAI API | Offline & Online support |
+| **Batch Pipeline** | Auto-fetch "Watch Later" -> Download -> Transcribe | **Core Feature** |
+| **Privacy First** | Credentials and Inference run 100% Locally | Safe for private lists |
+| **Agent Ready** | Standardized Skill Definition for Claude/GPT | Automate the process |
 
 ## Installation
 
@@ -73,7 +65,7 @@ It acts as a pipeline tool for your AI Agent. It autonomously batches download a
 
 ### 1. General Download
 ```bash
-python -m tools.download "https://www.youtube.com/watch?v=dQw4w9WgXcQ" --cookies-browser chrome
+python -m tools.download "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
 ```
 
 ### 2. Transcribe to Text
@@ -92,17 +84,35 @@ python -m tools.transcribe "output/video.m4a" -m openai
 
 ## Bilibili Workflow
 
-The ultimate "Clear Backlog" workflow:
+We support both **Public** and **Authenticated** modes.
 
-1.  **Login Once**:
+### Mode 1: Public Access (Default)
+For standard public videos, **no login is required**. Just use the download tool directly.
+
+```bash
+python -m tools.download "https://www.bilibili.com/video/BVxxx"
+```
+
+### Mode 2: Authenticated (Advanced)
+Login is required ONLY if you want to:
+1. Access your private **"Watch Later"** or **"Favorites"** lists.
+2. Download **1080P+ / Premium** quality videos.
+
+**Steps:**
+
+1.  **Login via QR Code**:
     ```bash
     python -m tools.auth
     ```
-2.  **Batch Process Watch Later**:
-    Fetch top 10 videos -> Download -> Transcribe.
-    Let your AI summarize these daily.
+    *(Session is saved locally to `.user_session.json`)*
+
+2.  **Process Backlog**:
+    Once logged in, you can fetch your private lists:
     ```bash
+    # 1. Fetch Top 10 from Watch Later
     python -m tools.list --watch-later --limit 10
+
+    # 2. Run the pipeline
     python -m tools.batch_run
     ```
 
