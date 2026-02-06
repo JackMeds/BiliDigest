@@ -1,7 +1,7 @@
 # Video-Skill-Transcriber 🧠
 
-> **不仅仅是下载器，更是 AI 的"眼睛"和"耳朵"。**
-> 让 Claude/ChatGPT 具备视频理解能力，实现自动摘要、思维导图构建、知识库沉淀。
+> **拯救你的"稍后不看"列表。让 AI 替你把那几千个吃灰的视频"看"完。**
+> 专为解决知识焦虑而生：一键批量转录 B 站/YouTube 收藏夹，生成摘要与笔记。
 
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
@@ -25,30 +25,30 @@
 
 ## 为什么需要这个工具
 
-在 AI 时代，视频是最大的知识黑洞。虽然 AI 文本能力很强，但它无法直接"看"懂 B 站的硬核教程或 YouTube 的深度讲座。
+**这也是我做这个项目的初衷：**
 
-**Video-Skill-Transcriber** 的出现，就是为了打通 **视频 -> AI** 的最后一步。它不仅仅是一个下载转录工具，更是一套**专为 AI 学习流程设计的 Skills**。
+你的 B 站"收藏夹"和"稍后再看"列表里是不是已经堆积了几千个视频？
+每次看到干货都想"马了就是学会了"，但其实由于时间成本太高，绝大多数视频都在吃灰。
 
-通过本工具，你也让 Agent 拥有了：
-1.  **全网视频获取能力** (Bilibili/YouTube/TikTok...)
-2.  **高精度听觉能力** (Whisper/Qwen3/OpenAI) 
-3.  **知识萃取的基础** (从视频到结构化文本)
+虽然现在的多模态大模型（如 Gemini 1.5, GPT-4o）可以直接看视频，但面对**成百上千**的待看列表，手动一个个投喂显然不现实，而且 Token 成本极高。
+
+**Video-Skill-Transcriber** 就是为了解决这个问题。
+它能作为 Agent 的"手"，全自动批量下载、转录你堆积的视频，把它们变成 AI 可以瞬间消化的文本知识。
+
+**从此，"稍后再看" 真的变成了 "已阅"。**
 
 ## 核心能力
 
-- **🎥 视频知识化**: 将长达数小时的视频课程，转换为 AI 可处理的精确文本。
-- **🤖 Agent 技能化**: 提供标准的 `.agent/skills` 接口，让 Claude/GPT 自主调用下载和转录。
-- **📚 批量学习流**: 支持一键处理 "稍后再看" 列表，通过 AI 自动生成每日学习摘要。
-- **🧠 本地隐私**: 支持纯本地模型 (Whisper/Qwen)，由于学习资料可能涉及隐私，本地处理更安全。
+- **🎥 批量消灭库存**: 一键处理 B 站"稍后再看"或收藏夹，自动流水线作业。
+- **🤖 Agent 技能化**: 提供标准的 `.agent/skills` 接口，让 Claude/GPT 自主调用。
+- **📝 高精度转录**: 集成 Whisper/Qwen3/OpenAI，把 2 小时的视频压缩成 5 分钟的笔记。
+- **🧠 本地隐私**: 支持纯本地模型运行，学习记录无需上传云端。
 
 ## AI 学习场景示例
 
-有了这个工具，你的 AI Agent 可以做到：
-
-*   **🎓 自动课程笔记**: "帮我把这两个小时的李宏毅深度学习课程转成 Markdown 笔记，提取核心知识点。"
-*   **📝 会议/访谈整理**: "把这段访谈录音转录，并分析受访者的核心观点和潜在情绪。"
-*   **🗺️ 知识图谱构建**: "下载这 10 个关于 'RAG' 的 B 站视频，梳理出技术发展路线图。"
-*   **🔍 跨语言学习**: "下载这个英文教程，转录并翻译成中文概览。"
+*   **🎓 自动清仓**: "帮我把稍后再看里关于 '深度学习' 的前 10 个视频全部看完，并总结成一份学习路径图。"
+*   **📝 课程笔记**: "下载这个李宏毅的合集，提取每一节课的核心知识点。"
+*   **🔍 知识检索**: "我记得好像收藏过一个讲 RAG 的视频，帮我找出来它具体是在哪一分钟讲了 GraphRAG。"
 
 ## 效果展示
 
@@ -76,7 +76,6 @@
 ## 使用指南
 
 ### 1. 通用视频获取
-让 AI "看到" 视频内容：
 ```bash
 python -m tools.download "https://www.bilibili.com/video/BVxxx" --cookies-browser chrome
 ```
@@ -94,25 +93,24 @@ python -m tools.transcribe "output/video.m4a" -m openai
 
 ## B站深度学习流
 
-专为 Bilibili 重度学习者打造的自动化流：
+专为 **消灭库存** 打造的自动化流：
 
 1.  **扫码登录** (只需一次):
     ```bash
     python -m tools.auth
     ```
 2.  **批量消化 "稍后再看"**:
-    不再让"稍后再看"变成"稍后不看"。一键拉取前 10 个视频进行转录：
+    每天处理 10 个，配合 AI 自动生摘，从此不再焦虑。
     ```bash
     python -m tools.list --watch-later --limit 10
     python -m tools.batch_run
     ```
-    配合 AI Agent，你可以让它每天早上为你推送这 10 个视频的**一句话总结**。
 
 ---
 
 ## 给 Agent 集成 (Skills)
 
-将 [`skills/VIDEO_SKILL.md`](skills/VIDEO_SKILL.md) 的内容提供给你的 AI Agent (如 Cursor, Claude Desktop, AutoGPT)。它将学会如何自主操作这些工具，成为你的**全能学习助手**。
+将 [`skills/VIDEO_SKILL.md`](skills/VIDEO_SKILL.md) 的内容提供给你的 AI Agent (如 Cursor, Claude Desktop)。它将学会如何自主帮你"刷"视频。
 
 ## 许可证
 

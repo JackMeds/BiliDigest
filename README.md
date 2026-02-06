@@ -1,7 +1,7 @@
 # Video-Skill-Transcriber 🧠
 
-> **More than a downloader. This is the "Eyes" and "Ears" for your AI Agent.**
-> Enable Claude/ChatGPT/AutoGPT to understand video content, generate summaries, build mind maps, and extract knowledge.
+> **The cure for your "Watch Later" backlog.**
+> Let AI binge-watch those thousands of saved videos for you, turning them into summaries and knowledge.
 
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
@@ -11,48 +11,40 @@
 
 ---
 
-## Table of Contents
+## 📖 Table of Contents
 
-- [Introduction](#introduction)
-- [Why Use This?](#why-use-this)
-- [Core Capabilities](#core-capabilities)
-- [AI Learning Scenarios](#ai-learning-scenarios)
+- [The Problem: Information Overload](#the-problem-information-overload)
+- [The Solution](#the-solution)
+- [How It Works](#how-it-works)
 - [Installation](#installation)
-- [Usage (CLI)](#usage-cli)
-- [Bilibili Special Workflow](#bilibili-special-workflow)
+- [Usage](#usage)
+- [Bilibili Workflow](#bilibili-workflow)
 - [For AI Agents (Skills)](#for-ai-agents-skills)
-- [License](#license)
 
 ---
 
-## Introduction
+## The Problem: Information Overload
 
-In the age of AI, video remains a "black box" for text-based models. **Video-Skill-Transcriber** bridges this gap. It is a specialized toolkit designed to empower AI Agents to autonomously access, download, and transcribe video content from the web (Bilibili, YouTube, etc.) or local files.
+Have you ever looked at your **YouTube "Watch Later"** or **Bilibili "Favorites"** list and felt anxiety?
 
-## Why Use This?
+You've saved thousands of high-quality tutorials, lectures, and talks, thinking "I'll learn this later." But "later" never comes because watching video is time-consuming.
 
-The goal isn't just to get an `.mp4` or `.txt` file—it's to **unlock knowledge**.
-By integrating this tool as a Skill, your AI Agent can:
+While Multimodal AI (like Gemini/GPT-4o) can watch *one* video, it cannot efficiently process your **entire backlog of 1,000 videos**. It's too slow and too expensive.
 
-1.  **"Watch" Deep Content**: Access hours of lectures, tutorials, and talks.
-2.  **"Hear" Every Detail**: Use state-of-the-art ASR models (Whisper/Qwen/OpenAI) for high-fidelity transcripts.
-3.  **"Synthesize" Knowledge**: Turn unstructured video into summaries, knowledge graphs, and study notes.
+## The Solution
+
+**Video-Skill-Transcriber** is built to solve exactly this.
+
+It acts as a pipeline tool for your AI Agent. It autonomously batches download and transcribes your backlog, converting hours of video into structured text that AI can digest in seconds.
+
+**Turn "Watch Later" into "Knowledge Acquired".**
 
 ## Core Capabilities
 
-- **🎥 Universal Ingestion**: Based on [yt-dlp](https://github.com/yt-dlp/yt-dlp), supporting thousands of sites (Bilibili, YouTube, TikTok...).
-- **🤖 Agent-Ready Skills**: Provides a standardized `skills/` interface for immediate integration with agent frameworks.
-- **📚 Batch Learning**: Automate the processing of playlists or "Watch Later" lists.
-- **🔒 Privacy First**: run fully local inference (Whisper/Qwen3-ASR) to keep your learning data private.
-
-## AI Learning Scenarios
-
-Imagine telling your AI Agent:
-
-*   **🎓 Auto-Summarization**: "Download this 2-hour lecture on Deep Learning and summarize the key concepts in bullet points."
-*   **🗺️ Knowledge Graphing**: "Process this playlist about 'RAG Architecture' and build a technology roadmap."
-*   **📝 Meeting Minutes**: "Transcribe this interview recording and extract action items."
-*   **🔍 Cross-Lingual Study**: "Download this English tutorial, transcribe it, and translate the summary to Chinese."
+- **🎥 Batch Processing**: Automatically handle playlists or "Watch Later" lists from Bilibili/YouTube.
+- **🤖 Agent Skills**: Standardized interface for AI Agents to autonomously fetch knowledge.
+- **📝 High-Fidelity ASR**: Uses Whisper, Qwen3 (Chinese optimized), or OpenAI API for accurate transcripts.
+- **🧠 Privacy First**: Run locally to keep your learning habits private.
 
 ## Demo
 
@@ -75,29 +67,21 @@ Imagine telling your AI Agent:
     *(Requires [FFmpeg](https://ffmpeg.org/) installed)*
 
 3.  **(Optional) Configure API**:
-    Copy `.env.example` to `.env` if you want to use Online Transcription (OpenAI, DeepSeek, etc.).
+    Copy `.env.example` to `.env` if you want to use Online Transcription.
 
-## Usage (CLI)
+## Usage
 
-All tools are located in the `tools/` package and can be run with `python -m tools.xxx`.
-
-### 1. Ingest Video Content
-
+### 1. General Download
 ```bash
-# YouTube/General
-python -m tools.download "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
-
-# Use Browser Cookies (Recommended for age-gated/premium content)
-python -m tools.download "URL" --cookies-browser chrome
+python -m tools.download "https://www.youtube.com/watch?v=dQw4w9WgXcQ" --cookies-browser chrome
 ```
 
-### 2. Transcribe to Knowledge
-
+### 2. Transcribe to Text
 ```bash
-# Local Whisper (Default - Balanced)
+# Local Whisper (Default)
 python -m tools.transcribe "output/video.m4a"
 
-# Local Qwen3-ASR (Best for Multilingual/Chinese)
+# Local Qwen3-ASR (Best for Chinese)
 python -m tools.transcribe "output/video.m4a" -m Qwen/Qwen3-ASR-0.6B
 
 # Online API (Fastest)
@@ -106,30 +90,28 @@ python -m tools.transcribe "output/video.m4a" -m openai
 
 ---
 
-## Bilibili Special Workflow
+## Bilibili Workflow
 
-Optimized for knowledge hunters on Bilibili:
+The ultimate "Clear Backlog" workflow:
 
-1.  **Auth Once**:
-    Safe QR login to save session locally.
+1.  **Login Once**:
     ```bash
     python -m tools.auth
     ```
-
-2.  **Clear Your "Watch Later"**:
-    Don't let videos pile up. Fetch the top 10 and process them automatically.
+2.  **Batch Process Watch Later**:
+    Fetch top 10 videos -> Download -> Transcribe.
+    Let your AI summarize these daily.
     ```bash
     python -m tools.list --watch-later --limit 10
     python -m tools.batch_run
     ```
-    *Pro Tip: Connect this to an Agent to get a "Daily Knowledge Digest".*
 
 ---
 
 ## For AI Agents (Skills)
 
-Give the content of [`skills/VIDEO_SKILL.md`](skills/VIDEO_SKILL.md) to your AI Agent (Claude/ChatGPT/Cursor). It serves as the instruction manual, enabling the AI to autonomously control these tools.
+Give [`skills/VIDEO_SKILL.md`](skills/VIDEO_SKILL.md) to your AI Agent (Claude/ChatGPT). It will learn to use these tools autonomously.
 
 ## License
 
-MIT
+MIT License
