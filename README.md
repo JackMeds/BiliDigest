@@ -37,7 +37,9 @@ You've saved thousands of high-quality tutorials, lectures, and talks, thinking 
 | Feature | Description | Note |
 | :--- | :--- | :--- |
 | **Universal Download** | Supports YouTube, Bilibili, TikTok, etc. | Powered by `yt-dlp` |
+| **Video Understanding** | Gemini 1.5 Pro/Flash reads video directly | **New** (Requires Key) |
 | **Multi-Engine ASR** | Whisper (Local), Qwen3 (Chinese Optimized), OpenAI API | Offline & Online support |
+| **API Server** | FastAPI interface for remote calls | **New** |
 | **Batch Pipeline** | Auto-fetch "Watch Later" -> Download -> Transcribe | **Core Feature** |
 | **Privacy First** | Credentials and Inference run 100% Locally | Safe for private lists |
 | **Agent Ready** | Standardized Skill Definition for Claude/GPT | Automate the process |
@@ -59,7 +61,7 @@ You've saved thousands of high-quality tutorials, lectures, and talks, thinking 
     *(Requires [FFmpeg](https://ffmpeg.org/) installed)*
 
 3.  **(Optional) Configure API**:
-    Copy `.env.example` to `.env` if you want to use Online Transcription.
+    Copy `.env.example` to `.env` if you want to use Online Transcription (OpenAI, Gemini).
 
 ## Usage
 
@@ -68,7 +70,7 @@ You've saved thousands of high-quality tutorials, lectures, and talks, thinking 
 python -m tools.download "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
 ```
 
-### 2. Transcribe to Text
+### 2. Transcribe / Video Understanding
 ```bash
 # Local Whisper (Default)
 python -m tools.transcribe "output/video.m4a"
@@ -76,8 +78,18 @@ python -m tools.transcribe "output/video.m4a"
 # Local Qwen3-ASR (Best for Chinese)
 python -m tools.transcribe "output/video.m4a" -m Qwen/Qwen3-ASR-0.6B
 
+# Multimodal AI (Gemini 1.5) - Reads video directly
+python -m tools.transcribe "output/video.mp4" -m gemini
+
 # Online API (Fastest)
 python -m tools.transcribe "output/video.m4a" -m openai
+```
+
+### 3. Start API Server
+Allow remote Agents to use these tools via HTTP:
+```bash
+python -m tools.api_server
+# Docs: http://localhost:8000/docs
 ```
 
 ---

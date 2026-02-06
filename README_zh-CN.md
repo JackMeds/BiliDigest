@@ -40,7 +40,9 @@
 | 功能 | 描述 | 备注 |
 | :--- | :--- | :--- |
 | **全网视频下载** | 支持 Bilibili, YouTube, TikTok 等数千网站 | 基于 `yt-dlp` |
+| **多模态直读** | 支持 Gemini 1.5 等大模型直接"看"视频 | **New** (需 Key) |
 | **多引擎转录** | 包含 Whisper (通用), Qwen3-ASR (中文增强), OpenAI API | 支持离线/在线 |
+| **API 服务** | 提供 HTTP 接口，允许远程调用模型 | **New** (FastAPI) |
 | **批量流水线** | 自动抓取"稍后再看"列表 -> 下载 -> 转录 | **核心功能** |
 | **隐私安全** | 登录凭证与转录过程均在本地运行 | 无数据上传 |
 | **Agent Ready** | 提供标准 Skill 定义，可直接集成给 Claude/GPT | 让 AI 自主操作 |
@@ -62,7 +64,7 @@
     *(需安装 [FFmpeg](https://ffmpeg.org/))*
 
 3.  **(可选) 配置在线模型**:
-    如需使用 OpenAI/DeepSeek 能力，复制 `.env.example` 到 `.env` 并填入 Key。
+    如需使用 OpenAI/Gemini 能力，复制 `.env.example` 到 `.env` 并填入 Key。
 
 ## 使用指南
 
@@ -74,13 +76,23 @@
 python -m tools.download "https://www.bilibili.com/video/BVxxx"
 ```
 
-### 2. 视频转录
+### 2. 视频转录 / 多模态分析
 ```bash
 # 本地模型 (推荐) - 保护隐私
 python -m tools.transcribe "output/video.m4a" -m Qwen/Qwen3-ASR-0.6B
 
+# 多模态大模型 (Gemini 1.5) - 直接看视频
+python -m tools.transcribe "output/video.mp4" -m gemini
+
 # 在线 API - 极速
 python -m tools.transcribe "output/video.m4a" -m openai
+```
+
+### 3. 启动 API 服务 (远程调用)
+如果你需要在其他机器或 Agent 中调用本机的处理能力：
+```bash
+python -m tools.api_server
+# API 文档: http://localhost:8000/docs
 ```
 
 ---
