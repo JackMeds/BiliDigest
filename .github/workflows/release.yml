@@ -1,4 +1,4 @@
-name: Publish Release
+name: Publish Source Zip
 
 on:
   push:
@@ -6,7 +6,7 @@ on:
       - 'v*'
 
 jobs:
-  build-and-publish:
+  release:
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -14,26 +14,21 @@ jobs:
     steps:
     - uses: actions/checkout@v3
     
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.10'
-        
-    - name: Install dependencies
+    - name: Get Version
+      id: get_version
+      run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+
+    - name: Create Zip Archive
       run: |
-        python -m pip install --upgrade pip
-        pip install build
-        
-    - name: Build package
-      run: python -m build
+        # ZIP exclude .git, .github, and other dev files
+        zip -r Video-Skill-Transcriber-${{ steps.get_version.outputs.VERSION }}.zip . -x "*.git*" ".github/*" ".gitignore" ".user_session.json" "__pycache__/*" "*.pyc"
       
     - name: Create Release
       uses: softprops/action-gh-release@v1
       if: startsWith(github.ref, 'refs/tags/')
       with:
         files: |
-          dist/*.whl
-          dist/*.tar.gz
+          Video-Skill-Transcriber-*.zip
         generate_release_notes: true
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

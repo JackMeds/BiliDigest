@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "video-skill-transcriber"
-version = "0.2.1"
+version = "0.2.2"
 description = "Universal video downloader and transcriber agent skills (Bilibili, YouTube, & more)"
 readme = "README.md"
 requires-python = ">=3.8"
