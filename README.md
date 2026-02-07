@@ -46,22 +46,39 @@ You've saved thousands of high-quality tutorials, lectures, and talks, thinking 
 
 ## Installation
 
-1.  **Clone the repository**:
+### Method 1: Standalone Usage (Recommended)
+
+1.  **Clone or Download ZIP**:
     ```bash
     git clone https://github.com/JackMeds/Video-Skill-Transcriber.git
+    # Or download ZIP from Release page
     cd Video-Skill-Transcriber
     ```
 
 2.  **Install dependencies**:
     ```bash
     python3 -m venv .venv
-    source .venv/bin/activate  # Windows: .venv\Scripts\activate
+    source .venv/bin/activate
     pip install -r requirements.txt
     ```
     *(Requires [FFmpeg](https://ffmpeg.org/) installed)*
 
+3.  **Update**:
+    Run the self-update tool (works for both Git and ZIP installs):
+    ```bash
+    python -m tools.update_skill
+    ```
+
+### Method 2: Install to Agent (e.g., OpenClaw)
+
+To integrate this skill into an existing Agent environment:
+```bash
+python install.py --target /path/to/.agent/skills
+```
+This creates a symlink, ensuring your Agent always uses the latest code.
+
 3.  **(Optional) Configure API**:
-    Copy `.env.example` to `.env` if you want to use Online Transcription (OpenAI, Gemini).
+    Copy `.env.example` to `.env` if you want to use Online Transcription.
 
 ## Usage
 

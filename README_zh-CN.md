@@ -49,19 +49,36 @@
 
 ## 安装与配置
 
-1.  **克隆仓库**:
+### 方式一：作为独立工具使用 (推荐)
+
+1.  **克隆或下载 ZIP**:
     ```bash
     git clone https://github.com/JackMeds/Video-Skill-Transcriber.git
+    # 或者下载 Release 发布页面的 ZIP 包解压
     cd Video-Skill-Transcriber
     ```
 
 2.  **安装依赖**:
     ```bash
     python3 -m venv .venv
-    source .venv/bin/activate  # Windows: .venv\Scripts\activate
+    source .venv/bin/activate
     pip install -r requirements.txt
     ```
-    *(需安装 [FFmpeg](https://ffmpeg.org/))*
+
+3.  **更新**:
+    无论你是 Git 克隆还是 ZIP 下载，都可以运行以下命令一键更新到最新版：
+    ```bash
+    python -m tools.update_skill
+    ```
+
+### 方式二：安装到 Agent (如 OpenClaw)
+
+如果你希望将此工具集成到现有的 Agent 技能目录中：
+
+```bash
+python install.py --target /path/to/.agent/skills
+```
+这将自动创建软链接，确保你的 Agent 始终使用最新代码。
 
 3.  **(可选) 配置在线模型**:
     如需使用 OpenAI/Gemini 能力，复制 `.env.example` 到 `.env` 并填入 Key。
