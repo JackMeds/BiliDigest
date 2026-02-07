@@ -1,11 +1,16 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
 name = "video-skill-transcriber"
-version = "0.1.0"
+version = "0.2.1"
 description = "Universal video downloader and transcriber agent skills (Bilibili, YouTube, & more)"
 readme = "README.md"
 requires-python = ">=3.8"
 license = {text = "MIT"}
 authors = [
-    {name = "Your Name", email = "you@example.com"}
+    {name = "JackMeds", email = "jackmeds@users.noreply.github.com"}
 ]
 dependencies = [
     "yt-dlp>=2024.0.0",
@@ -16,12 +21,12 @@ dependencies = [
     "python-dotenv>=1.0.0",
     "transformers>=4.38.0",
     "torch>=2.0.0", 
-    "torchaudio>=2.0.0"
+    "torchaudio>=2.0.0",
+    "fastapi>=0.100.0",
+    "uvicorn>=0.20.0",
+    "python-multipart>=0.0.6",
+    "google-generativeai>=0.4.0"
 ]
-
-[build-system]
-requires = ["setuptools>=61.0"]
-build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
 where = ["."]
