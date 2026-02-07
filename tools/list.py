@@ -87,13 +87,13 @@ def main():
             cookie_file.unlink()
     else:
         # 尝试加载 auth.py 保存的 session
-        sys.path.insert(0, str(Path(__file__).parent))
         try:
-            from auth import get_cookies
+            from .auth import get_cookies
             cookies = get_cookies()
             if cookies:
                 print("   认证: 使用保存的 Session ✅")
-        except ImportError:
+        except ImportError as e:
+            print(f"⚠️ 导入 auth 失败: {e}")
             pass
 
     if not cookies:

@@ -92,6 +92,16 @@ class BilibiliAuth:
         except KeyboardInterrupt:
             print("\n❌ 用户取消")
 
+def get_cookies():
+    """获取保存的 Cookie"""
+    if SESSION_FILE.exists():
+        try:
+            with open(SESSION_FILE, 'r') as f:
+                return json.load(f)
+        except:
+            return None
+    return None
+
 def main():
     check_environment("auth")
     
