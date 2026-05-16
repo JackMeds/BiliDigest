@@ -11,6 +11,10 @@ venv/
 .user_session.json
 .env
 cookies.txt
+batch_list.json
+batch_progress.json
+*.cookies
+*.cookies.txt
 *.pkl
 
 # 下载的内容

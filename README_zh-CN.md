@@ -1,159 +1,83 @@
-# Video-Skill-Transcriber 🧠
+# 哔哩字幕笔记
 
-> **拯救你的"稍后不看"列表。让 AI 替你把那几千个吃灰的视频"看"完。**
-> 专为解决知识焦虑而生：一键批量转录 B 站/YouTube 收藏夹，生成摘要与笔记。
+面向个人 Agent 工作流的 B站字幕导出工具。
 
-[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-[![Python](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
-[![Release](https://img.shields.io/github/v/release/JackMeds/Video-Skill-Transcriber)](https://github.com/JackMeds/Video-Skill-Transcriber/releases)
+**BiliSubNotes / 哔哩字幕笔记** 用于读取本人已登录 B站账号可访问的视频，把“稍后再看”和“收藏夹”中的现成字幕、B站 AI 小助手总结导出为 Markdown/SRT/JSON，方便 Hermes Agent、Codex 或其他 Agent 做总结、笔记和知识整理。
 
-[English README](README.md)
+## 功能
 
----
+- 使用本地 `.user_session.json` 登录态。
+- 列出稍后再看、收藏夹目录、收藏夹内容。
+- 优先使用 B站已有字幕，不默认跑 ASR。
+- 可导出 B站 AI 小助手总结。
+- 输出到 `output/bilisub/<日期>/`。
+- Whisper/Qwen/OpenAI/Gemini 保留为显式 fallback，不再作为主流程。
 
-## 📖 目录
+本项目不是 B站 API 文档库，也不是公开第三方客户端。定位是本地私有自用的 Agent 辅助工具。
 
-- [为什么需要这个工具](#为什么需要这个工具)
-- [功能列表](#功能列表)
-- [安装与配置](#安装与配置)
-- [使用指南](#使用指南)
-- [B站专属教程 (Bilibili Tutorial)](#b站专属教程-bilibili-tutorial)
-- [给 Agent 集成 (Skills)](#给-agent-集成-skills)
-
----
-
-## 为什么需要这个工具
-
-**这也是我做这个项目的初衷：**
-
-你的 B 站"收藏夹"和"稍后再看"列表里是不是已经堆积了几千个视频？
-每次看到干货都想"马了就是学会了"，但其实由于时间成本太高，绝大多数视频都在吃灰。
-
-虽然现在的多模态大模型可以直接看视频，但面对**成百上千**的待看列表，手动一个个投喂显然不现实。
-
-**Video-Skill-Transcriber** 就是为了解决这个问题。它能作为 Agent 的"手"，全自动批量流水线作业，把你堆积的视频变成 AI 可以瞬间消化的文本知识。
-
-**从此，"稍后再看" 真的变成了 "已阅"。**
-
-## 功能列表
-
-| 功能 | 描述 | 备注 |
-| :--- | :--- | :--- |
-| **全网视频下载** | 支持 Bilibili, YouTube, TikTok 等数千网站 | 基于 `yt-dlp` |
-| **多模态直读** | 支持 Gemini 1.5 等大模型直接"看"视频 | **New** (需 Key) |
-| **多引擎转录** | 包含 Whisper (通用), Qwen3-ASR (中文增强), OpenAI API | 支持离线/在线 |
-| **API 服务** | 提供 HTTP 接口，允许远程调用模型 | **New** (FastAPI) |
-| **批量流水线** | 自动抓取"稍后再看"列表 -> 下载 -> 转录 | **核心功能** |
-| **隐私安全** | 登录凭证与转录过程均在本地运行 | 无数据上传 |
-| **Agent Ready** | 提供标准 Skill 定义，可直接集成给 Claude/GPT | 让 AI 自主操作 |
-
-## 安装与配置
-
-### 方式一：作为独立工具使用 (推荐)
-
-1.  **克隆或下载 ZIP**:
-    ```bash
-    git clone https://github.com/JackMeds/Video-Skill-Transcriber.git
-    # 或者下载 Release 发布页面的 ZIP 包解压
-    cd Video-Skill-Transcriber
-    ```
-
-2.  **安装依赖**:
-    ```bash
-    python3 -m venv .venv
-    source .venv/bin/activate
-    pip install -r requirements.txt
-    ```
-
-3.  **更新**:
-    无论你是 Git 克隆还是 ZIP 下载，都可以运行以下命令一键更新到最新版：
-    ```bash
-    python -m tools.update_skill
-    ```
-
-### 方式二：安装到 Agent (如 OpenClaw)
-
-如果你希望将此工具集成到现有的 Agent 技能目录中：
+## 安装
 
 ```bash
-python install.py --target /path/to/.agent/skills
-```
-这将自动创建软链接，确保你的 Agent 始终使用最新代码。
-
-3.  **(可选) 配置在线模型**:
-    如需使用 OpenAI/Gemini 能力，复制 `.env.example` 到 `.env` 并填入 Key。
-
-## 使用指南
-
-所有的工具都支持通过 `python -m tools.xxx` 方式调用。
-
-### 1. 视频下载 (通用)
-```bash
-# 通用下载 (无需登录)
-python -m tools.download "https://www.bilibili.com/video/BVxxx"
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
 ```
 
-### 2. 视频转录 / 多模态分析
-```bash
-# 本地模型 (推荐) - 保护隐私
-python -m tools.transcribe "output/video.m4a" -m Qwen/Qwen3-ASR-0.6B
-
-# 多模态大模型 (Gemini 1.5) - 直接看视频
-python -m tools.transcribe "output/video.mp4" -m gemini
-
-# 在线 API - 极速
-python -m tools.transcribe "output/video.m4a" -m openai
-```
-
-### 3. 启动 API 服务 (远程调用)
-如果你需要在其他机器或 Agent 中调用本机的处理能力：
-```bash
-python -m tools.api_server
-# API 文档: http://localhost:8000/docs
-```
-
----
-
-## B站专属教程 (Bilibili Tutorial)
-
-针对 B 站用户，我们支持 **免登录** 和 **登录** 两种模式。
-
-### 模式一：免登录 (默认)
-如果你只是下载公开视频（非会员、非限制级），**不需要任何配置**，直接使用下载命令即可。
+## 登录
 
 ```bash
-python -m tools.download "https://www.bilibili.com/video/BVxxx"
+python -m tools.bilisub auth status
+python -m tools.bilisub auth login
 ```
 
-### 模式二：登录 (解锁高级功能)
-如果你需要：
-1.  下载 **"稍后再看"** 或 **"收藏夹"** (这些是私有列表)。
-2.  下载 **1080P+ 高画质** 或 **大会员专享** 视频。
+扫码登录会同时输出紧凑终端二维码、可复制登录 URL，并保存图片到 `output/login_qr.png`。登录态保存为 `.user_session.json`，不会被 Git 跟踪。
 
-你需要先登录。我们提供安全的扫码登录工具：
+## 使用
 
-1.  **扫码登录**:
-    ```bash
-    python -m tools.auth
-    ```
-    *(Session 会保存在本地 `.user_session.json`，不会上传任何服务器)*
+```bash
+# 稍后再看
+python -m tools.bilisub list watch-later --limit 15
 
-2.  **批量处理"稍后再看"**:
-    登录成功后，即可读取你的私有列表并开始批量作业：
-    ```bash
-    # 1. 获取列表
-    python -m tools.list --watch-later --limit 10
+# 本人收藏夹目录
+python -m tools.bilisub list favorites --mid me
 
-    # 2. 开始流水线 (下载+转录)
-    python -m tools.batch_run
-    ```
+# 指定收藏夹内容
+python -m tools.bilisub list favorite --media-id 123456 --limit 15
 
----
+# 导出字幕
+python -m tools.bilisub transcript BVxxxxxxxxxx --format md
+python -m tools.bilisub transcript "https://www.bilibili.com/video/BVxxxxxxxxxx" --format srt
 
-## 给 Agent 集成 (Skills)
+# 导出 B站 AI 小助手总结
+python -m tools.bilisub summary BVxxxxxxxxxx
 
-将 [`skills/VIDEO_SKILL.md`](skills/VIDEO_SKILL.md) 的内容提供给你的 AI Agent。它将学会如何自主调用上述命令。
+# 批量处理稍后再看
+python -m tools.bilisub batch watch-later --limit 15 --with-summary
+```
 
-## 许可证
+旧命令仍保留兼容：`python -m tools.auth --status`、`python -m tools.list --watch-later`、`python -m tools.batch_run`。
 
-MIT License
+## Agent Skill
+
+Skill 位于：
+
+```text
+skills/bilisub-notes/
+```
+
+安装或刷新本机 Codex/OpenAI skill 软链接：
+
+```bash
+python install.py --target ~/.codex/.agents/skills
+```
+
+## 安全默认值
+
+- 批量命令默认最多处理 `15` 条。
+- 遇到 HTTP `412` 或 B站 `-352` 等风控信号会停止批处理。
+- Cookie、Session、`.env` 和输出目录均被 Git 忽略。
+- 只处理本人账号本来就能访问的内容。
+
+## 鸣谢
+
+BiliSubNotes 的功能边界和安全策略参考了开源 B站工具的实践，特别是 [BiliTools](https://github.com/btjawa/BiliTools)。本项目不迁入 BiliTools 的 Tauri UI，只保留轻量 Python CLI，供本地 Agent 使用。

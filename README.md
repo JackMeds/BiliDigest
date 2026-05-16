@@ -1,156 +1,85 @@
-# Video-Skill-Transcriber 🧠
+# BiliSubNotes
 
-> **The cure for your "Watch Later" backlog.**
-> Let AI binge-watch those thousands of saved videos for you, turning them into summaries and knowledge.
+Private Bilibili subtitle notes for agents.
 
-[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-[![Python](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
-[![Release](https://img.shields.io/github/v/release/JackMeds/Video-Skill-Transcriber)](https://github.com/JackMeds/Video-Skill-Transcriber/releases)
+**BiliSubNotes** exports subtitles and Bilibili AI summaries from videos that your own logged-in Bilibili account can already access. It is designed for local agent workflows such as Hermes Agent, Codex, or other assistants that need readable Markdown from your Watch Later and Favorites lists.
 
-[中文说明 (Chinese README)](README_zh-CN.md)
+[中文说明](README_zh-CN.md)
 
----
+## What It Does
 
-## 📖 Table of Contents
+- Reads your Bilibili login session from local `.user_session.json`.
+- Lists Watch Later and Favorite folders/items.
+- Exports existing Bilibili subtitles first, without running ASR by default.
+- Exports Bilibili AI Assistant summaries when available.
+- Writes Markdown, SRT, and JSON under `output/bilisub/<date>/`.
+- Keeps Whisper/Qwen/OpenAI/Gemini transcription tools as explicit fallbacks.
 
-- [The Problem: Information Overload](#the-problem-information-overload)
-- [Features](#features)
-- [Installation](#installation)
-- [Usage](#usage)
-- [Bilibili Workflow](#bilibili-workflow)
-- [For AI Agents (Skills)](#for-ai-agents-skills)
+This is not a public API documentation project and not a third-party Bilibili client. It is a private local tool for personal notes.
 
----
+## Install
 
-## The Problem: Information Overload
-
-Have you ever looked at your **YouTube "Watch Later"** or **Bilibili "Favorites"** list and felt anxiety?
-
-You've saved thousands of high-quality tutorials, lectures, and talks, thinking "I'll learn this later." But "later" never comes because watching video is time-consuming.
-
-**Video-Skill-Transcriber** is the solution. It autonomously batches download and transcribes your backlog, converting hours of video into structured text that AI can digest in seconds.
-
-**Turn "Watch Later" into "Knowledge Acquired".**
-
-## Features
-
-| Feature | Description | Note |
-| :--- | :--- | :--- |
-| **Universal Download** | Supports YouTube, Bilibili, TikTok, etc. | Powered by `yt-dlp` |
-| **Video Understanding** | Gemini 1.5 Pro/Flash reads video directly | **New** (Requires Key) |
-| **Multi-Engine ASR** | Whisper (Local), Qwen3 (Chinese Optimized), OpenAI API | Offline & Online support |
-| **API Server** | FastAPI interface for remote calls | **New** |
-| **Batch Pipeline** | Auto-fetch "Watch Later" -> Download -> Transcribe | **Core Feature** |
-| **Privacy First** | Credentials and Inference run 100% Locally | Safe for private lists |
-| **Agent Ready** | Standardized Skill Definition for Claude/GPT | Automate the process |
-
-## Installation
-
-### Method 1: Standalone Usage (Recommended)
-
-1.  **Clone or Download ZIP**:
-    ```bash
-    git clone https://github.com/JackMeds/Video-Skill-Transcriber.git
-    # Or download ZIP from Release page
-    cd Video-Skill-Transcriber
-    ```
-
-2.  **Install dependencies**:
-    ```bash
-    python3 -m venv .venv
-    source .venv/bin/activate
-    pip install -r requirements.txt
-    ```
-    *(Requires [FFmpeg](https://ffmpeg.org/) installed)*
-
-3.  **Update**:
-    Run the self-update tool (works for both Git and ZIP installs):
-    ```bash
-    python -m tools.update_skill
-    ```
-
-### Method 2: Install to Agent (e.g., OpenClaw)
-
-To integrate this skill into an existing Agent environment:
 ```bash
-python install.py --target /path/to/.agent/skills
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
 ```
-This creates a symlink, ensuring your Agent always uses the latest code.
 
-3.  **(Optional) Configure API**:
-    Copy `.env.example` to `.env` if you want to use Online Transcription.
+## Login
+
+```bash
+python -m tools.bilisub auth status
+python -m tools.bilisub auth login
+```
+
+The QR login command prints a compact terminal QR, a copyable login URL, and writes `output/login_qr.png`. The session is saved to `.user_session.json`, which is ignored by Git.
 
 ## Usage
 
-### 1. General Download
 ```bash
-python -m tools.download "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
+# Watch Later
+python -m tools.bilisub list watch-later --limit 15
+
+# Favorite folders for your own account
+python -m tools.bilisub list favorites --mid me
+
+# Items in a favorite folder
+python -m tools.bilisub list favorite --media-id 123456 --limit 15
+
+# Export subtitles
+python -m tools.bilisub transcript BVxxxxxxxxxx --format md
+python -m tools.bilisub transcript "https://www.bilibili.com/video/BVxxxxxxxxxx" --format srt
+
+# Export Bilibili AI Assistant summary
+python -m tools.bilisub summary BVxxxxxxxxxx
+
+# Batch Watch Later
+python -m tools.bilisub batch watch-later --limit 15 --with-summary
 ```
 
-### 2. Transcribe / Video Understanding
-```bash
-# Local Whisper (Default)
-python -m tools.transcribe "output/video.m4a"
+Legacy commands such as `python -m tools.auth --status`, `python -m tools.list --watch-later`, and `python -m tools.batch_run` still work as compatibility wrappers.
 
-# Local Qwen3-ASR (Best for Chinese)
-python -m tools.transcribe "output/video.m4a" -m Qwen/Qwen3-ASR-0.6B
+## Agent Skill
 
-# Multimodal AI (Gemini 1.5) - Reads video directly
-python -m tools.transcribe "output/video.mp4" -m gemini
+The skill lives at:
 
-# Online API (Fastest)
-python -m tools.transcribe "output/video.m4a" -m openai
+```text
+skills/bilisub-notes/
 ```
 
-### 3. Start API Server
-Allow remote Agents to use these tools via HTTP:
-```bash
-python -m tools.api_server
-# Docs: http://localhost:8000/docs
-```
-
----
-
-## Bilibili Workflow
-
-We support both **Public** and **Authenticated** modes.
-
-### Mode 1: Public Access (Default)
-For standard public videos, **no login is required**. Just use the download tool directly.
+Install or refresh the local Codex/OpenAI skill symlink:
 
 ```bash
-python -m tools.download "https://www.bilibili.com/video/BVxxx"
+python install.py --target ~/.codex/.agents/skills
 ```
 
-### Mode 2: Authenticated (Advanced)
-Login is required ONLY if you want to:
-1. Access your private **"Watch Later"** or **"Favorites"** lists.
-2. Download **1080P+ / Premium** quality videos.
+## Safety Defaults
 
-**Steps:**
+- Batch commands default to `15` items.
+- Risk-control responses such as HTTP `412` or Bilibili `-352` stop batch processing.
+- Cookies, sessions, `.env`, and output files are ignored by Git.
+- The tool only processes content your logged-in account can already access.
 
-1.  **Login via QR Code**:
-    ```bash
-    python -m tools.auth
-    ```
-    *(Session is saved locally to `.user_session.json`)*
+## Acknowledgements
 
-2.  **Process Backlog**:
-    Once logged in, you can fetch your private lists:
-    ```bash
-    # 1. Fetch Top 10 from Watch Later
-    python -m tools.list --watch-later --limit 10
-
-    # 2. Run the pipeline
-    python -m tools.batch_run
-    ```
-
----
-
-## For AI Agents (Skills)
-
-Give [`skills/VIDEO_SKILL.md`](skills/VIDEO_SKILL.md) to your AI Agent (Claude/ChatGPT). It will learn to use these tools autonomously.
-
-## License
-
-MIT License
+BiliSubNotes was shaped by practical behavior observed in open-source Bilibili tooling, especially [BiliTools](https://github.com/btjawa/BiliTools). This repository does not import the BiliTools Tauri UI; it keeps a small Python CLI surface for local agent use.

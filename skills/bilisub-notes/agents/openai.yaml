@@ -1,0 +1,3 @@
+name: bilisub-notes
+description: Export Bilibili subtitles and AI summaries into local Markdown for agent notes.
+entrypoint: SKILL.md

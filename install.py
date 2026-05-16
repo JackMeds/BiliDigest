@@ -6,16 +6,16 @@ import shutil
 
 def install_skill(target_dir=None):
     """
-    Installs the current Video-Skill-Transcriber into the Agent's skills directory.
+    Installs the BiliSubNotes skill into the Agent's skills directory.
     """
-    # 1. Determine Source (Current Directory)
-    source_path = Path(__file__).parent.resolve()
+    source_path = (Path(__file__).parent / "skills" / "bilisub-notes").resolve()
     
     # 2. Determine Target
     if not target_dir:
         # Default locations to check
         possible_targets = [
             Path(".agent/skills"),
+            Path.home() / ".codex/.agents/skills",
             Path.home() / ".agent/skills",
             Path.home() / ".config/opencode/skills" 
         ]
@@ -32,7 +32,7 @@ def install_skill(target_dir=None):
             target_dir = Path(".agent/skills")
             print(f"⚠️ No agent directory found. Creating default: {target_dir}")
 
-    dest_path = Path(target_dir) / "video-transcriber"
+    dest_path = Path(target_dir) / "bilisub-notes"
     
     # 3. Installation (Symlink preferred for updates)
     print(f"🚀 Installing from {source_path} to {dest_path}...")
@@ -57,7 +57,7 @@ def install_skill(target_dir=None):
         print("✅ Success! Installed via Copy.")
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Install Video Skill to Agent")
+    parser = argparse.ArgumentParser(description="Install BiliSubNotes Skill to Agent")
     parser.add_argument("--target", "-t", help="Target skills directory (e.g. .agent/skills)")
     args = parser.parse_args()
     

@@ -3,9 +3,9 @@ requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "video-skill-transcriber"
-version = "0.2.3"
-description = "Universal video downloader and transcriber agent skills (Bilibili, YouTube, & more)"
+name = "bilisubnotes"
+version = "0.3.0"
+description = "Private Bilibili subtitle and AI-summary exporter for agent notes"
 readme = "README.md"
 requires-python = ">=3.8"
 license = {text = "MIT"}

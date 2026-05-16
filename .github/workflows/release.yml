@@ -21,14 +21,14 @@ jobs:
     - name: Create Zip Archive
       run: |
         # ZIP exclude .git, .github, and other dev files
-        zip -r Video-Skill-Transcriber-${{ steps.get_version.outputs.VERSION }}.zip . -x "*.git*" ".github/*" ".gitignore" ".user_session.json" "__pycache__/*" "*.pyc"
+        zip -r BiliSubNotes-${{ steps.get_version.outputs.VERSION }}.zip . -x "*.git*" ".github/*" ".gitignore" ".user_session.json" "__pycache__/*" "*.pyc" ".env" "output/*" "*.cookies*"
       
     - name: Create Release
       uses: softprops/action-gh-release@v1
       if: startsWith(github.ref, 'refs/tags/')
       with:
         files: |
-          Video-Skill-Transcriber-*.zip
+          BiliSubNotes-*.zip
         generate_release_notes: true
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
