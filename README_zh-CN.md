@@ -32,6 +32,16 @@ python -m tools.bilisub auth login
 
 扫码登录会同时输出紧凑终端二维码、可复制登录 URL，并保存图片到 `output/login_qr.png`。登录态保存为 `.user_session.json`，不会被 Git 跟踪。
 
+如果调用方是 Hermes Agent、Telegram bot 或 TUI，使用非阻塞 JSON 登录流程：
+
+```bash
+python -m tools.bilisub auth login --json --no-wait
+python -m tools.bilisub auth poll <qrcode_key> --json
+python -m tools.bilisub auth status --json
+```
+
+第一条命令会返回 `login_url`、`qr_image`、`qrcode_key` 和 `poll_command`。聊天 Agent 把 URL 或二维码图片发给用户，再轮询直到状态变成 `logged_in`、`expired`、`scanned` 或 `pending`。
+
 ## 使用
 
 ```bash

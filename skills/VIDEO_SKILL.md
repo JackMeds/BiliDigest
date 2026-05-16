@@ -6,6 +6,8 @@ Use the local BiliSubNotes CLI to export Bilibili subtitles and AI summaries fro
 
 ```bash
 python -m tools.bilisub auth status
+python -m tools.bilisub auth login --json --no-wait
+python -m tools.bilisub auth poll <qrcode_key> --json
 python -m tools.bilisub list watch-later --limit 15
 python -m tools.bilisub transcript BVxxxxxxxxxx --format md
 python -m tools.bilisub summary BVxxxxxxxxxx

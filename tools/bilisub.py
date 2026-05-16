@@ -19,7 +19,14 @@ def print_json(data: object) -> None:
 
 
 def cmd_auth(args: argparse.Namespace) -> int:
-    return bili_auth.main([args.action])
+    forwarded = [args.action]
+    if args.qrcode_key:
+        forwarded.append(args.qrcode_key)
+    if args.json:
+        forwarded.append("--json")
+    if args.no_wait:
+        forwarded.append("--no-wait")
+    return bili_auth.main(forwarded)
 
 
 def cmd_list(args: argparse.Namespace) -> int:
@@ -98,7 +105,10 @@ def build_parser() -> argparse.ArgumentParser:
     sub = parser.add_subparsers(dest="command", required=True)
 
     auth = sub.add_parser("auth", help="B站登录状态和扫码登录")
-    auth.add_argument("action", choices=["status", "login"])
+    auth.add_argument("action", choices=["status", "login", "poll"])
+    auth.add_argument("qrcode_key", nargs="?")
+    auth.add_argument("--json", action="store_true")
+    auth.add_argument("--no-wait", action="store_true")
     auth.set_defaults(func=cmd_auth)
 
     list_parser = sub.add_parser("list", help="列出稍后再看或收藏夹")

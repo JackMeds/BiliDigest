@@ -34,6 +34,16 @@ python -m tools.bilisub auth login
 
 The QR login command prints a compact terminal QR, a copyable login URL, and writes `output/login_qr.png`. The session is saved to `.user_session.json`, which is ignored by Git.
 
+For chat agents such as Hermes Agent, Telegram bots, or a TUI, use the non-blocking JSON login flow:
+
+```bash
+python -m tools.bilisub auth login --json --no-wait
+python -m tools.bilisub auth poll <qrcode_key> --json
+python -m tools.bilisub auth status --json
+```
+
+The first command returns `login_url`, `qr_image`, `qrcode_key`, and `poll_command`. Send the URL or QR image to the user, then poll until the response status becomes `logged_in`, `expired`, `scanned`, or `pending`.
+
 ## Usage
 
 ```bash

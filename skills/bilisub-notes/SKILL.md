@@ -15,6 +15,8 @@ Run commands from the BiliSubNotes project root.
 ```bash
 python -m tools.bilisub auth status
 python -m tools.bilisub auth login
+python -m tools.bilisub auth login --json --no-wait
+python -m tools.bilisub auth poll <qrcode_key> --json
 python -m tools.bilisub list watch-later --limit 15
 python -m tools.bilisub list favorites --mid me
 python -m tools.bilisub list favorite --media-id <id> --limit 15
@@ -30,6 +32,22 @@ python -m tools.bilisub batch watch-later --limit 15 --with-summary
 3. For a video, export Bilibili's existing subtitle first. Do not run ASR unless the subtitle export fails and the user asks for fallback transcription.
 4. Read the generated Markdown from `output/bilisub/<date>/` and summarize or organize notes from that text.
 5. If Bilibili returns risk-control or login errors, stop and tell the user to re-login or retry later.
+
+## Chat Login Flow
+
+For chat surfaces such as Hermes Agent, Telegram, or a TUI, do not block forever inside an interactive login command. Run:
+
+```bash
+python -m tools.bilisub auth login --json --no-wait
+```
+
+Send the returned `login_url` or `qr_image` to the user. Then poll with:
+
+```bash
+python -m tools.bilisub auth poll <qrcode_key> --json
+```
+
+Treat `logged_in` as success, `expired` as a request to regenerate the QR code, `scanned` as waiting for phone confirmation, and `pending` as still waiting for the scan.
 
 ## Safety
 
