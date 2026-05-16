@@ -5,24 +5,30 @@
 import sys
 import argparse
 import subprocess
-import json
+import os
 from pathlib import Path
 from .utils import check_environment, get_output_dir
+from .bili_client import SESSION_FILE, load_cookies
 
-def create_temp_cookie_file(json_path):
+YTDLP_SLEEP_SECONDS = os.environ.get("BILISUB_YTDLP_SLEEP_SECONDS", "8")
+YTDLP_MAX_SLEEP_SECONDS = os.environ.get("BILISUB_YTDLP_MAX_SLEEP_SECONDS", "14")
+
+
+def create_temp_cookie_file(cookies):
     """将 JSON Session 转为 Netscape 格式供 yt-dlp 使用"""
     try:
-        with open(json_path, 'r') as f:
-            cookies = json.load(f)
-        
         temp_path = Path("output/.temp_cookies.txt")
         temp_path.parent.mkdir(exist_ok=True)
         with open(temp_path, 'w') as f:
             f.write("# Netscape HTTP Cookie File\n")
             for k, v in cookies.items():
                 f.write(f".bilibili.com\tTRUE\t/\tFALSE\t0\t{k}\t{v}\n")
+        try:
+            temp_path.chmod(0o600)
+        except OSError:
+            pass
         return temp_path
-    except:
+    except OSError:
         return None
 
 def download(url, output_dir, video=False, browser=None):
@@ -49,18 +55,23 @@ def download(url, output_dir, video=False, browser=None):
         "-f", format_arg,
         "--no-playlist",
         "--progress",
-        "--ignore-errors"
+        "--ignore-errors",
+        "--concurrent-fragments", "1",
+        "--sleep-requests", YTDLP_SLEEP_SECONDS,
+        "--sleep-interval", YTDLP_SLEEP_SECONDS,
+        "--max-sleep-interval", YTDLP_MAX_SLEEP_SECONDS,
     ]
     
     # 处理 Cookie
     temp_cookie = None
     if browser:
         cmd.extend(["--cookies-from-browser", browser])
-    elif Path(".user_session.json").exists():
-        temp_cookie = create_temp_cookie_file(".user_session.json")
+    else:
+        cookies = load_cookies()
+        temp_cookie = create_temp_cookie_file(cookies) if cookies else None
         if temp_cookie:
             cmd.extend(["--cookies", str(temp_cookie)])
-            print("🍪 使用本地 Session")
+            print(f"🍪 使用共享 Session: {SESSION_FILE}")
 
     try:
         process = subprocess.Popen(
@@ -97,9 +108,6 @@ def download(url, output_dir, video=False, browser=None):
             print("✅ 下载完成")
             if filepath:
                 print(f"   文件: {filepath}")
-            # 清理临时 Cookie
-            if temp_cookie and temp_cookie.exists():
-                temp_cookie.unlink()
             return filepath
         else:
             print("❌ 下载出错")
@@ -111,6 +119,9 @@ def download(url, output_dir, video=False, browser=None):
     except Exception as e:
         print(f"❌ 执行异常: {e}")
         return None
+    finally:
+        if temp_cookie and temp_cookie.exists():
+            temp_cookie.unlink()
 
 if __name__ == "__main__":
     check_environment("download")

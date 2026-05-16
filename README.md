@@ -8,7 +8,7 @@ Private Bilibili subtitle notes for agents.
 
 ## What It Does
 
-- Reads your Bilibili login session from local `.user_session.json`.
+- Reads your Bilibili login session from a shared user data file, with legacy `.user_session.json` migration.
 - Lists Watch Later and Favorite folders/items.
 - Exports existing Bilibili subtitles first, without running ASR by default.
 - Exports Bilibili AI Assistant summaries when available.
@@ -29,10 +29,17 @@ pip install -r requirements.txt
 
 ```bash
 python -m tools.bilisub auth status
+python -m tools.bilisub auth import-browser edge
 python -m tools.bilisub auth login
 ```
 
-The QR login command prints a compact terminal QR, a copyable login URL, and writes `output/login_qr.png`. The session is saved to `.user_session.json`, which is ignored by Git.
+The preferred login cache is the macOS user data file:
+
+```text
+~/Library/Application Support/BiliSubNotes/session.json
+```
+
+`auth import-browser edge` imports your existing Microsoft Edge Bilibili cookies through `yt-dlp` and stores them in that shared session file. The QR login command remains available; it prints a compact terminal QR, a copyable login URL, and writes `output/login_qr.png`. Old project-local `.user_session.json` files are only used as a legacy fallback and are migrated into the shared session file when possible.
 
 For chat agents such as Hermes Agent, Telegram bots, or a TUI, use the non-blocking JSON login flow:
 
@@ -43,6 +50,12 @@ python -m tools.bilisub auth status --json
 ```
 
 The first command returns `login_url`, `qr_image`, `qrcode_key`, and `poll_command`. Send the URL or QR image to the user, then poll until the response status becomes `logged_in`, `expired`, `scanned`, or `pending`.
+
+To see the shared session location:
+
+```bash
+python -m tools.bilisub auth session-path --json
+```
 
 ## Usage
 
@@ -86,6 +99,8 @@ python install.py --target ~/.codex/.agents/skills
 ## Safety Defaults
 
 - Batch commands default to `15` items.
+- Requests are deliberately slow by default: each API call waits about `8-12` seconds. You can tune this with `BILISUB_DELAY_SECONDS` and `BILISUB_DELAY_JITTER_SECONDS`.
+- The legacy video/audio downloader also uses one fragment at a time and passes slow `yt-dlp` sleep settings. Tune it with `BILISUB_YTDLP_SLEEP_SECONDS` and `BILISUB_YTDLP_MAX_SLEEP_SECONDS`.
 - Risk-control responses such as HTTP `412` or Bilibili `-352` stop batch processing.
 - Cookies, sessions, `.env`, and output files are ignored by Git.
 - The tool only processes content your logged-in account can already access.

@@ -90,3 +90,66 @@ def test_json_login_no_wait_prints_payload(monkeypatch, tmp_path, capsys):
     assert code == 0
     assert output["status"] == "login_required"
     assert output["qrcode_key"] == "qr-key"
+
+
+def test_parse_netscape_cookie_file_keeps_bilibili_cookies(tmp_path):
+    cookie_file = tmp_path / "cookies.txt"
+    cookie_file.write_text(
+        "\n".join(
+            [
+                "# Netscape HTTP Cookie File",
+                ".bilibili.com\tTRUE\t/\tFALSE\t0\tSESSDATA\tabc",
+                ".bilibili.com\tTRUE\t/\tFALSE\t0\tbili_jct\tcsrf",
+                ".example.com\tTRUE\t/\tFALSE\t0\tSESSDATA\twrong",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    cookies = bili_auth.parse_netscape_cookie_file(cookie_file)
+
+    assert cookies == {"SESSDATA": "abc", "bili_jct": "csrf"}
+
+
+def test_import_browser_uses_yt_dlp_and_saves_session(monkeypatch, tmp_path, capsys):
+    saved = {}
+
+    def fake_run(cmd, capture_output, text, timeout):
+        cookie_path = tmp_path / "edge.cookies.txt"
+        cookie_path.write_text(".bilibili.com\tTRUE\t/\tFALSE\t0\tSESSDATA\tabc\n", encoding="utf-8")
+        cmd_cookie_path = cmd[cmd.index("--cookies") + 1]
+        tmp_cookie_path = type(cookie_path)(cmd_cookie_path)
+        tmp_cookie_path.write_text(cookie_path.read_text(encoding="utf-8"), encoding="utf-8")
+
+        class Result:
+            returncode = 0
+            stderr = ""
+
+        return Result()
+
+    monkeypatch.setattr(bili_auth.subprocess, "run", fake_run)
+    monkeypatch.setattr(bili_auth, "save_cookies", lambda cookies: saved.update(cookies))
+    monkeypatch.setattr(bili_auth, "SESSION_FILE", tmp_path / "session.json")
+
+    code = bili_auth.import_browser("edge", as_json=True)
+    output = json.loads(capsys.readouterr().out)
+
+    assert code == 0
+    assert output["status"] == "imported"
+    assert output["browser"] == "edge"
+    assert saved == {"SESSDATA": "abc"}
+
+
+def test_import_browser_timeout_returns_json_failure(monkeypatch, capsys):
+    def fake_run(cmd, capture_output, text, timeout):
+        raise bili_auth.subprocess.TimeoutExpired(cmd, timeout)
+
+    monkeypatch.setattr(bili_auth.subprocess, "run", fake_run)
+
+    code = bili_auth.import_browser("edge", as_json=True)
+    output = json.loads(capsys.readouterr().out)
+
+    assert code == 1
+    assert output["status"] == "failed"
+    assert output["browser"] == "edge"
+    assert "Timed out" in output["message"]

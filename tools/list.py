@@ -9,7 +9,7 @@ def main():
     parser.add_argument("--favorites", action="store_true", help="获取收藏夹列表")
     parser.add_argument("--favorite", action="store_true", help="获取指定收藏夹内容")
     parser.add_argument("--media-id", help="收藏夹 media_id")
-    parser.add_argument("--browser", "-b", help="保留参数；新版优先使用 .user_session.json")
+    parser.add_argument("--browser", "-b", help="保留参数；新版优先使用共享 session")
     parser.add_argument("--limit", "-n", type=int, default=10, help="数量限制")
     args = parser.parse_args()
     if args.watch_later:

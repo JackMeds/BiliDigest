@@ -1,29 +1,36 @@
 import argparse
 import json
+import os
+import subprocess
 import sys
+import tempfile
 import time
 from pathlib import Path
 
 import qrcode
 import requests
 
-from .bili_client import BiliClient, LoginRequired, OUTPUT_DIR, save_cookies
+from .bili_client import BiliClient, LoginRequired, OUTPUT_DIR, SESSION_FILE, LEGACY_SESSION_FILE, load_cookies, save_cookies
 
 
 QR_API_URL = "https://passport.bilibili.com/x/passport-login/web/qrcode/generate"
 QR_POLL_URL = "https://passport.bilibili.com/x/passport-login/web/qrcode/poll"
+BILIBILI_COOKIE_NAMES = {"SESSDATA", "bili_jct", "DedeUserID", "DedeUserID__ckMd5", "sid", "buvid3", "buvid4", "b_nut", "_uuid", "bili_ticket", "refresh_token"}
+LOGIN_POLL_INTERVAL_SECONDS = float(os.environ.get("BILISUB_LOGIN_POLL_INTERVAL_SECONDS", "5"))
 
 
 def status_payload() -> dict[str, object]:
     try:
         data = BiliClient(delay=0).login_status()
     except LoginRequired as exc:
-        return {"status": "not_logged_in", "message": str(exc)}
+        return {"status": "not_logged_in", "message": str(exc), "session_path": str(SESSION_FILE), "legacy_session_path": str(LEGACY_SESSION_FILE)}
     return {
         "status": "logged_in",
         "uname": data.get("uname"),
         "mid": data.get("mid"),
         "vip": data.get("vipStatus") == 1,
+        "session_path": str(SESSION_FILE),
+        "legacy_session_path": str(LEGACY_SESSION_FILE),
     }
 
 
@@ -39,6 +46,10 @@ def print_payload(payload: dict[str, object], as_json: bool = False) -> None:
         print("请使用 Bilibili App 扫码登录")
         print(f"登录 URL: {payload['login_url']}")
         print(f"二维码图片: {payload['qr_image']}")
+    elif payload["status"] in {"imported", "ok"}:
+        print(payload.get("message") or payload)
+    elif payload["status"] in {"failed", "expired", "scanned", "pending"}:
+        print(f"状态: {payload.get('message')}")
     else:
         print(f"未登录: {payload.get('message')}")
 
@@ -72,7 +83,7 @@ def create_login_request() -> dict[str, object]:
     qr.add_data(qrcode_url)
     qr.make(fit=True)
 
-    OUTPUT_DIR.mkdir(exist_ok=True)
+    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     img_path = OUTPUT_DIR / "login_qr.png"
     qr.make_image(fill_color="black", back_color="white").save(img_path)
 
@@ -82,7 +93,8 @@ def create_login_request() -> dict[str, object]:
         "login_url": qrcode_url,
         "qrcode_key": qrcode_key,
         "qr_image": str(img_path),
-        "poll_command": f"python -m tools.bilisub auth poll {qrcode_key}",
+        "poll_command": f"python -m tools.bilisub auth poll {qrcode_key} --json",
+        "session_path": str(SESSION_FILE),
     }
 
 
@@ -103,7 +115,7 @@ def poll_once(qrcode_key: str) -> dict[str, object]:
             refresh = result["url"].split("refresh_token=", 1)[1].split("&", 1)[0]
             cookies["refresh_token"] = refresh
         save_cookies(cookies)
-        return {"status": "logged_in", "code": code, "message": "登录成功，Session 已保存到 .user_session.json"}
+        return {"status": "logged_in", "code": code, "message": f"登录成功，Session 已保存到 {SESSION_FILE}", "session_path": str(SESSION_FILE)}
     if code == 86038:
         return {"status": "expired", "code": code, "message": "二维码已失效"}
     if code == 86090:
@@ -132,7 +144,7 @@ def login(as_json: bool = False, no_wait: bool = False) -> int:
         return 0
 
     while True:
-        time.sleep(2)
+        time.sleep(LOGIN_POLL_INTERVAL_SECONDS)
         current = poll_once(str(payload["qrcode_key"]))
         if current["status"] == "logged_in":
             print_payload(current, as_json)
@@ -143,19 +155,101 @@ def login(as_json: bool = False, no_wait: bool = False) -> int:
         print_payload(current, as_json)
 
 
+def parse_netscape_cookie_file(path: Path) -> dict[str, str]:
+    cookies: dict[str, str] = {}
+    with path.open("r", encoding="utf-8", errors="ignore") as f:
+        for raw in f:
+            line = raw.strip()
+            if not line or line.startswith("#"):
+                continue
+            parts = line.split("\t")
+            if len(parts) < 7:
+                continue
+            domain, name, value = parts[0], parts[5], parts[6]
+            if "bilibili.com" in domain and (name in BILIBILI_COOKIE_NAMES or name.startswith("buvid")):
+                cookies[name] = value
+    return cookies
+
+
+def import_browser(browser: str, as_json: bool = False) -> int:
+    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+    with tempfile.NamedTemporaryFile(prefix="bilisub-browser-", suffix=".cookies.txt", delete=False) as tmp:
+        cookie_path = Path(tmp.name)
+    cmd = [
+        sys.executable,
+        "-m",
+        "yt_dlp",
+        "--cookies-from-browser",
+        browser,
+        "--cookies",
+        str(cookie_path),
+        "--skip-download",
+        "--quiet",
+        "https://www.bilibili.com",
+    ]
+    try:
+        try:
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
+        except subprocess.TimeoutExpired:
+            payload = {
+                "status": "failed",
+                "browser": browser,
+                "message": "Timed out while importing browser cookies. Close the browser or use QR login, then retry later.",
+            }
+            print_payload(payload, as_json)
+            return 1
+        if result.returncode != 0:
+            payload = {
+                "status": "failed",
+                "browser": browser,
+                "message": "Failed to import browser cookies. Close the browser and retry if the cookie database is locked.",
+                "stderr": result.stderr.strip()[-800:],
+            }
+            print_payload(payload, as_json)
+            return 1
+        cookies = parse_netscape_cookie_file(cookie_path)
+        if not cookies.get("SESSDATA"):
+            payload = {"status": "failed", "browser": browser, "message": "No Bilibili SESSDATA cookie found in browser export"}
+            print_payload(payload, as_json)
+            return 1
+        save_cookies(cookies)
+        payload = {
+            "status": "imported",
+            "browser": browser,
+            "cookie_count": len(cookies),
+            "session_path": str(SESSION_FILE),
+            "message": f"Imported Bilibili cookies from {browser}",
+        }
+        print_payload(payload, as_json)
+        return 0
+    finally:
+        try:
+            cookie_path.unlink()
+        except FileNotFoundError:
+            pass
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="BiliSubNotes B站登录工具")
-    parser.add_argument("action", nargs="?", choices=["status", "login", "poll"], default="login")
-    parser.add_argument("qrcode_key", nargs="?")
+    parser.add_argument("action", nargs="?", choices=["status", "login", "poll", "import-browser", "session-path"], default="login")
+    parser.add_argument("value", nargs="?")
     parser.add_argument("--json", action="store_true", help="输出机器可读 JSON")
     parser.add_argument("--no-wait", action="store_true", help="只生成二维码，不阻塞等待扫码")
     args = parser.parse_args(argv)
     if args.action == "status":
         return status(args.json)
     if args.action == "poll":
-        if not args.qrcode_key:
+        if not args.value:
             parser.error("auth poll requires qrcode_key")
-        return poll(args.qrcode_key, args.json)
+        return poll(args.value, args.json)
+    if args.action == "import-browser":
+        if not args.value:
+            parser.error("auth import-browser requires browser name, e.g. edge")
+        return import_browser(args.value, args.json)
+    if args.action == "session-path":
+        payload = {"status": "ok", "session_path": str(SESSION_FILE), "legacy_session_path": str(LEGACY_SESSION_FILE), "has_session": bool(load_cookies())}
+        print_payload(payload, args.json)
+        return 0
     return login(args.json, args.no_wait)
 
 

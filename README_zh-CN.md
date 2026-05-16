@@ -6,7 +6,7 @@
 
 ## 功能
 
-- 使用本地 `.user_session.json` 登录态。
+- 使用统一的用户数据目录 session，并兼容迁移旧版 `.user_session.json`。
 - 列出稍后再看、收藏夹目录、收藏夹内容。
 - 优先使用 B站已有字幕，不默认跑 ASR。
 - 可导出 B站 AI 小助手总结。
@@ -27,10 +27,17 @@ pip install -r requirements.txt
 
 ```bash
 python -m tools.bilisub auth status
+python -m tools.bilisub auth import-browser edge
 python -m tools.bilisub auth login
 ```
 
-扫码登录会同时输出紧凑终端二维码、可复制登录 URL，并保存图片到 `output/login_qr.png`。登录态保存为 `.user_session.json`，不会被 Git 跟踪。
+默认登录态统一保存到 macOS 用户数据目录：
+
+```text
+~/Library/Application Support/BiliSubNotes/session.json
+```
+
+`auth import-browser edge` 会通过 `yt-dlp` 导入 Microsoft Edge 里的 B站 Cookie，并保存到这份共享 session。扫码登录仍然保留：它会同时输出紧凑终端二维码、可复制登录 URL，并保存图片到 `output/login_qr.png`。旧版项目根目录 `.user_session.json` 只作为兼容 fallback；如果存在且有效，会尽量迁移到共享 session。
 
 如果调用方是 Hermes Agent、Telegram bot 或 TUI，使用非阻塞 JSON 登录流程：
 
@@ -41,6 +48,12 @@ python -m tools.bilisub auth status --json
 ```
 
 第一条命令会返回 `login_url`、`qr_image`、`qrcode_key` 和 `poll_command`。聊天 Agent 把 URL 或二维码图片发给用户，再轮询直到状态变成 `logged_in`、`expired`、`scanned` 或 `pending`。
+
+查看当前共享 session 位置：
+
+```bash
+python -m tools.bilisub auth session-path --json
+```
 
 ## 使用
 
@@ -84,6 +97,8 @@ python install.py --target ~/.codex/.agents/skills
 ## 安全默认值
 
 - 批量命令默认最多处理 `15` 条。
+- 请求默认故意很慢：每次 API 调用大约等待 `8-12` 秒。可以用 `BILISUB_DELAY_SECONDS` 和 `BILISUB_DELAY_JITTER_SECONDS` 调整。
+- 旧的视频/音频下载入口也会使用单 fragment 和慢速 `yt-dlp` sleep 参数。可以用 `BILISUB_YTDLP_SLEEP_SECONDS` 和 `BILISUB_YTDLP_MAX_SLEEP_SECONDS` 调整。
 - 遇到 HTTP `412` 或 B站 `-352` 等风控信号会停止批处理。
 - Cookie、Session、`.env` 和输出目录均被 Git 忽略。
 - 只处理本人账号本来就能访问的内容。

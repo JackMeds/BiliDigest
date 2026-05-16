@@ -1,5 +1,7 @@
 import hashlib
 import json
+import os
+import platform
 import random
 import re
 import time
@@ -11,12 +13,24 @@ import requests
 
 
 ROOT_DIR = Path(__file__).parent.parent.resolve()
-SESSION_FILE = ROOT_DIR / ".user_session.json"
+LEGACY_SESSION_FILE = ROOT_DIR / ".user_session.json"
 OUTPUT_DIR = ROOT_DIR / "output"
+DEFAULT_DELAY_SECONDS = float(os.environ.get("BILISUB_DELAY_SECONDS", "8.0"))
+DEFAULT_DELAY_JITTER_SECONDS = float(os.environ.get("BILISUB_DELAY_JITTER_SECONDS", "4.0"))
 USER_AGENT = (
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
     "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0.0.0 Safari/537.36"
 )
+
+
+def user_data_dir() -> Path:
+    if platform.system() == "Darwin":
+        return Path.home() / "Library" / "Application Support" / "BiliSubNotes"
+    root = os.environ.get("XDG_DATA_HOME")
+    return Path(root).expanduser() / "bilisubnotes" if root else Path.home() / ".local" / "share" / "bilisubnotes"
+
+
+SESSION_FILE = user_data_dir() / "session.json"
 
 
 class BiliError(RuntimeError):
@@ -36,18 +50,37 @@ class RiskControl(BiliError):
         super().__init__(message, code=412, stop_batch=True)
 
 
-def load_cookies(path: Path = SESSION_FILE) -> dict[str, str]:
+def load_cookies(path: Path | None = None) -> dict[str, str]:
+    session_path = path or SESSION_FILE
+    if not session_path.exists() and path is None and LEGACY_SESSION_FILE.exists():
+        cookies = _read_cookie_json(LEGACY_SESSION_FILE)
+        if cookies:
+            save_cookies(cookies)
+        return cookies
+    return _read_cookie_json(session_path)
+
+
+def _read_cookie_json(path: Path) -> dict[str, str]:
     if not path.exists():
         return {}
-    with path.open("r", encoding="utf-8") as f:
-        data = json.load(f)
+    try:
+        with path.open("r", encoding="utf-8") as f:
+            data = json.load(f)
+    except (json.JSONDecodeError, OSError):
+        return {}
     if not isinstance(data, dict):
         return {}
     return {str(k): str(v) for k, v in data.items() if v is not None}
 
 
-def save_cookies(cookies: dict[str, str], path: Path = SESSION_FILE) -> None:
-    path.write_text(json.dumps(cookies, ensure_ascii=False, indent=2), encoding="utf-8")
+def save_cookies(cookies: dict[str, str], path: Path | None = None) -> None:
+    session_path = path or SESSION_FILE
+    session_path.parent.mkdir(parents=True, exist_ok=True)
+    session_path.write_text(json.dumps(cookies, ensure_ascii=False, indent=2), encoding="utf-8")
+    try:
+        session_path.chmod(0o600)
+    except OSError:
+        pass
 
 
 def sanitize_filename(value: str, max_len: int = 90) -> str:
@@ -62,7 +95,7 @@ def dated_output_dir() -> Path:
 
 
 class BiliClient:
-    def __init__(self, cookies: dict[str, str] | None = None, delay: float = 0.8):
+    def __init__(self, cookies: dict[str, str] | None = None, delay: float | None = None):
         self.session = requests.Session()
         self.session.headers.update(
             {
@@ -72,7 +105,8 @@ class BiliClient:
             }
         )
         self.session.cookies.update(cookies if cookies is not None else load_cookies())
-        self.delay = delay
+        self.delay = DEFAULT_DELAY_SECONDS if delay is None else delay
+        self.delay_jitter = 0.0 if self.delay == 0 else DEFAULT_DELAY_JITTER_SECONDS
         self._last_request = 0.0
         self._wbi_key: str | None = None
 
@@ -82,7 +116,7 @@ class BiliClient:
 
     def throttle(self) -> None:
         elapsed = time.time() - self._last_request
-        wait = self.delay + random.uniform(0.1, 0.5) - elapsed
+        wait = self.delay + random.uniform(0.0, self.delay_jitter) - elapsed
         if wait > 0:
             time.sleep(wait)
         self._last_request = time.time()

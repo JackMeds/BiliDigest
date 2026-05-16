@@ -1,6 +1,6 @@
 import pytest
 
-from tools.bili_client import BiliClient, LoginRequired, RiskControl
+from tools.bili_client import BiliClient, LoginRequired, RiskControl, load_cookies
 
 
 class FakeResponse:
@@ -48,3 +48,10 @@ def test_request_json_stops_on_bilibili_risk_code():
 
     with pytest.raises(RiskControl):
         client.request_json("https://example.test")
+
+
+def test_load_cookies_reads_explicit_session_file(tmp_path):
+    session = tmp_path / "session.json"
+    session.write_text('{"SESSDATA": "abc", "empty": null}', encoding="utf-8")
+
+    assert load_cookies(session) == {"SESSDATA": "abc"}
