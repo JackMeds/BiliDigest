@@ -8,6 +8,8 @@ origin: BiliSubNotes
 
 Use this skill when the user asks to summarize, inspect, or take notes from Bilibili Watch Later, Favorites, or a specific Bilibili video.
 
+This repository is GPL-3.0-or-later and includes attribution notes for BiliTools in `NOTICE`.
+
 ## Commands
 
 Prefer the bundled launcher next to this `SKILL.md` so the skill also works when installed outside the repository:

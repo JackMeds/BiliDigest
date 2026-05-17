@@ -2,6 +2,8 @@
 
 面向个人 Agent 工作流的 B站字幕导出工具。
 
+许可证：GPL-3.0-or-later。
+
 **BiliSubNotes / 哔哩字幕笔记** 用于读取本人已登录 B站账号可访问的视频，把“稍后再看”和“收藏夹”中的现成字幕、B站 AI 小助手总结导出为 Markdown/SRT/JSON，方便 Hermes Agent、Codex 或其他 Agent 做总结、笔记和知识整理。
 
 ## 功能
@@ -129,4 +131,4 @@ npx skills add . --skill bilisub-notes -g -a codex -y
 
 ## 鸣谢
 
-BiliSubNotes 的功能边界和安全策略参考了开源 B站工具的实践，特别是 [BiliTools](https://github.com/btjawa/BiliTools)。本项目不迁入 BiliTools 的 Tauri UI，只保留轻量 Python CLI，供本地 Agent 使用。
+BiliSubNotes 的功能边界和安全策略参考了开源 B站工具的实践，特别是采用 GPL-3.0-or-later 协议的 [BiliTools](https://github.com/btjawa/BiliTools)。本项目不迁入 BiliTools 的 Tauri UI，只保留轻量 Python CLI，供本地 Agent 使用。归属和参考说明见 [NOTICE](NOTICE)。

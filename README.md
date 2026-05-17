@@ -2,6 +2,8 @@
 
 Private Bilibili subtitle notes for agents.
 
+License: GPL-3.0-or-later.
+
 **BiliSubNotes** exports subtitles and Bilibili AI summaries from videos that your own logged-in Bilibili account can already access. It is designed for local agent workflows such as Hermes Agent, Codex, or other assistants that need readable Markdown from your Watch Later and Favorites lists.
 
 [中文说明](README_zh-CN.md)
@@ -131,4 +133,4 @@ npx skills add . --skill bilisub-notes -g -a codex -y
 
 ## Acknowledgements
 
-BiliSubNotes was shaped by practical behavior observed in open-source Bilibili tooling, especially [BiliTools](https://github.com/btjawa/BiliTools). This repository does not import the BiliTools Tauri UI; it keeps a small Python CLI surface for local agent use.
+BiliSubNotes was shaped by practical behavior observed in open-source Bilibili tooling, especially [BiliTools](https://github.com/btjawa/BiliTools), which is licensed under GPL-3.0-or-later. This repository does not import the BiliTools Tauri UI; it keeps a small Python CLI surface for local agent use. See [NOTICE](NOTICE) for attribution notes.
