@@ -1,25 +1,25 @@
-# BiliDigest
+# 哔哩摘要笔记
 
-Bilibili digest notes for agents.
+面向个人 Agent 工作流的 B站收藏与稍后再看摘要工具。
 
-License: GPL-3.0-or-later.
+[English README](README_en.md)
 
-**BiliDigest** helps agents summarize and organize videos from your own logged-in Bilibili Watch Later and Favorites lists. It prefers existing Bilibili subtitles and AI summaries when available, and keeps ASR/model-based transcription as an explicit fallback path.
+许可证：GPL-3.0-or-later。
 
-[中文说明](README_zh-CN.md)
+**BiliDigest / 哔哩摘要笔记** 用于读取本人已登录 B站账号可访问的视频，把“稍后再看”和“收藏夹”中的内容整理成 Markdown/SRT/JSON，方便 Hermes Agent、Codex 或其他 Agent 做总结、笔记和知识整理。它优先使用 B站现成字幕和 B站 AI 小助手总结，也保留 ASR/大模型转写作为显式 fallback。
 
-## What It Does
+## 功能
 
-- Reads your Bilibili login session from a shared user data file, with legacy `.user_session.json` migration.
-- Lists Watch Later and Favorite folders/items.
-- Exports existing Bilibili subtitles first, without running ASR by default.
-- Exports Bilibili AI Assistant summaries when available.
-- Writes Markdown, SRT, and JSON under `output/bilidigest/<date>/`.
-- Keeps Whisper/Qwen/OpenAI/Gemini transcription tools as explicit fallbacks.
+- 使用统一的用户数据目录 session，并兼容迁移旧版 `.user_session.json`。
+- 列出稍后再看、收藏夹目录、收藏夹内容。
+- 优先使用 B站已有字幕，不默认跑 ASR。
+- 可导出 B站 AI 小助手总结。
+- 输出到 `output/bilidigest/<日期>/`。
+- Whisper/Qwen/OpenAI/Gemini 保留为显式 fallback，不再作为主流程。
 
-This is not a public API documentation project and not a third-party Bilibili client. It is a local-first tool for personal notes and agent workflows.
+本项目不是 B站 API 文档库，也不是第三方客户端。定位是本地优先的个人 Agent 辅助工具。
 
-## Install
+## 安装
 
 ```bash
 python3 -m venv .venv
@@ -27,7 +27,7 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-## Login
+## 登录
 
 ```bash
 python -m tools.bilidigest auth status
@@ -35,15 +35,15 @@ python -m tools.bilidigest auth import-browser edge
 python -m tools.bilidigest auth login
 ```
 
-The preferred login cache is the macOS user data file:
+默认登录态统一保存到 macOS 用户数据目录：
 
 ```text
 ~/Library/Application Support/BiliDigest/session.json
 ```
 
-`auth import-browser edge` imports your existing Microsoft Edge Bilibili cookies through `yt-dlp` and stores them in that shared session file. The QR login command remains available; it prints a compact terminal QR, a copyable login URL, and writes `output/login_qr.png`. Old BiliSubNotes and project-local `.user_session.json` files are only used as legacy fallbacks and are migrated into the shared session file when possible.
+`auth import-browser edge` 会通过 `yt-dlp` 导入 Microsoft Edge 里的 B站 Cookie，并保存到这份共享 session。扫码登录仍然保留：它会同时输出紧凑终端二维码、可复制登录 URL，并保存图片到 `output/login_qr.png`。旧版 BiliSubNotes session 和项目根目录 `.user_session.json` 只作为兼容 fallback；如果存在且有效，会尽量迁移到共享 session。
 
-For chat agents such as Hermes Agent, Telegram bots, or a TUI, use the non-blocking JSON login flow:
+如果调用方是 Hermes Agent、Telegram bot 或 TUI，使用非阻塞 JSON 登录流程：
 
 ```bash
 python -m tools.bilidigest auth login --json --no-wait
@@ -51,86 +51,86 @@ python -m tools.bilidigest auth poll <qrcode_key> --json
 python -m tools.bilidigest auth status --json
 ```
 
-The first command returns `login_url`, `qr_image`, `qrcode_key`, and `poll_command`. Send the URL or QR image to the user, then poll until the response status becomes `logged_in`, `expired`, `scanned`, or `pending`.
+第一条命令会返回 `login_url`、`qr_image`、`qrcode_key` 和 `poll_command`。聊天 Agent 把 URL 或二维码图片发给用户，再轮询直到状态变成 `logged_in`、`expired`、`scanned` 或 `pending`。
 
-To see the shared session location:
+查看当前共享 session 位置：
 
 ```bash
 python -m tools.bilidigest auth session-path --json
 ```
 
-## Usage
+## 使用
 
 ```bash
-# Watch Later
+# 稍后再看
 python -m tools.bilidigest list watch-later --limit 15
 
-# Favorite folders for your own account
+# 本人收藏夹目录
 python -m tools.bilidigest list favorites --mid me
 
-# Items in a favorite folder
+# 指定收藏夹内容
 python -m tools.bilidigest list favorite --media-id 123456 --limit 15
 
-# Export subtitles
+# 导出字幕
 python -m tools.bilidigest transcript BVxxxxxxxxxx --format md
 python -m tools.bilidigest transcript "https://www.bilibili.com/video/BVxxxxxxxxxx" --format srt
 
-# Export Bilibili AI Assistant summary
+# 导出 B站 AI 小助手总结
 python -m tools.bilidigest summary BVxxxxxxxxxx
 
-# Batch Watch Later
+# 批量处理稍后再看
 python -m tools.bilidigest batch watch-later --limit 15 --with-summary
 ```
 
-Legacy commands such as `python -m tools.auth --status`, `python -m tools.list --watch-later`, and `python -m tools.batch_run` still work as compatibility wrappers.
+旧命令仍保留兼容：`python -m tools.auth --status`、`python -m tools.list --watch-later`、`python -m tools.batch_run`。
 
 ## Agent Skill
 
-The skill lives at:
+Skill 位于：
 
 ```text
 skills/bili-digest/
 ```
 
-The repository follows the Agent Skills layout: each skill is a directory with a required `SKILL.md` file. This means standard installers can discover it:
+仓库采用 Agent Skills 标准目录：每个 Skill 是一个目录，目录内必须有 `SKILL.md`。因此标准安装器可以直接发现它：
 
 ```bash
 npx skills add . --list
 npx skills add . --skill bili-digest -g -a codex -y
 ```
 
-For the public GitHub repository, HTTPS works directly:
+如果从公开 GitHub 仓库安装，HTTPS 可以直接使用：
 
 ```bash
 npx skills add https://github.com/JackMeds/BiliDigest --skill bili-digest -g -a codex -y
 ```
 
-SSH install also works after `ssh -T git@github.com` succeeds. On this machine SSH auth is not currently configured for GitHub, so prefer HTTPS or the local path.
+SSH 形式也可以，但前提是 `ssh -T git@github.com` 能通过。本机当前 GitHub SSH 未打通，所以更建议用 HTTPS 或本地路径。
 
-`npx skills` installs the skill instructions, not the Python project itself. Keep this repository cloned and dependencies installed. The skill includes `skills/bili-digest/scripts/bilidigest`, a small launcher that finds the clone via `BILIDIGEST_HOME` or the default local path.
+`npx skills` 安装的是 Skill 指令，不会自动安装 Python 项目本体。仍然需要保留本仓库 clone 和 `.venv` 依赖。Skill 内置了 `skills/bili-digest/scripts/bilidigest` 启动器，会通过 `BILIDIGEST_HOME` 或默认本机路径找到真正的 CLI。
 
-For live development on this machine, a symlink install is still useful because edits reflect immediately:
+本机开发时也可以继续用软链接安装，优点是改 Skill 文档后立即生效：
 
 ```bash
 python install.py --target ~/.agents/skills
 ```
 
-For routine updates after a pull:
+日常更新可以这样做：
 
 ```bash
 git pull
 npx skills add . --skill bili-digest -g -a codex -y
 ```
 
-## Safety Defaults
+## 安全默认值
 
-- Batch commands default to `15` items.
-- Requests are deliberately slow by default: each API call waits about `8-12` seconds. You can tune this with `BILIDIGEST_DELAY_SECONDS` and `BILIDIGEST_DELAY_JITTER_SECONDS`.
-- The legacy video/audio downloader also uses one fragment at a time and passes slow `yt-dlp` sleep settings. Tune it with `BILIDIGEST_YTDLP_SLEEP_SECONDS` and `BILIDIGEST_YTDLP_MAX_SLEEP_SECONDS`.
-- Risk-control responses such as HTTP `412` or Bilibili `-352` stop batch processing.
-- Cookies, sessions, `.env`, and output files are ignored by Git.
-- The tool only processes content your logged-in account can already access.
+- 批量命令默认最多处理 `15` 条。
+- 请求默认故意很慢：每次 API 调用大约等待 `8-12` 秒。可以用 `BILIDIGEST_DELAY_SECONDS` 和 `BILIDIGEST_DELAY_JITTER_SECONDS` 调整。
+- 旧的视频/音频下载入口也会使用单 fragment 和慢速 `yt-dlp` sleep 参数。可以用 `BILIDIGEST_YTDLP_SLEEP_SECONDS` 和 `BILIDIGEST_YTDLP_MAX_SLEEP_SECONDS` 调整。
+- 遇到 HTTP `412` 或 B站 `-352` 等风控信号会停止批处理。
+- Cookie、Session、`.env` 和输出目录均被 Git 忽略。
+- 只处理本人账号本来就能访问的内容。
 
-## Acknowledgements
+## 鸣谢
 
-BiliDigest was shaped by practical behavior observed in open-source Bilibili tooling, especially [BiliTools](https://github.com/btjawa/BiliTools), which is licensed under GPL-3.0-or-later. This repository does not import the BiliTools Tauri UI; it keeps a small Python CLI surface for local agent use. See [NOTICE](NOTICE) for attribution notes.
+BiliDigest 的功能边界和安全策略参考了开源 B站工具的实践，特别是采用 GPL-3.0-or-later 协议的 [BiliTools](https://github.com/btjawa/BiliTools)。本项目不迁入 BiliTools 的 Tauri UI，只保留轻量 Python CLI，供本地 Agent 使用。归属和参考说明见 [NOTICE](NOTICE)。
