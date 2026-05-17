@@ -10,7 +10,20 @@ Use this skill when the user asks to summarize, inspect, or take notes from Bili
 
 ## Commands
 
-Run commands from the BiliSubNotes project root.
+Prefer the bundled launcher next to this `SKILL.md` so the skill also works when installed outside the repository:
+
+```bash
+scripts/bilisub auth status
+scripts/bilisub auth import-browser edge
+scripts/bilisub auth session-path --json
+scripts/bilisub auth login --json --no-wait
+scripts/bilisub auth poll <qrcode_key> --json
+scripts/bilisub list watch-later --limit 15
+scripts/bilisub transcript <BV-or-url> --format md
+scripts/bilisub summary <BV-or-url>
+```
+
+If the launcher cannot find the repository, set `BILISUBNOTES_HOME` to the cloned BiliSubNotes path. When already inside the BiliSubNotes project root, these direct commands are equivalent:
 
 ```bash
 python -m tools.bilisub auth status

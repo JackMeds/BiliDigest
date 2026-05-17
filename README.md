@@ -90,10 +90,34 @@ The skill lives at:
 skills/bilisub-notes/
 ```
 
-Install or refresh the local Codex/OpenAI skill symlink:
+The repository follows the Agent Skills layout: each skill is a directory with a required `SKILL.md` file. This means standard installers can discover it:
 
 ```bash
-python install.py --target ~/.codex/.agents/skills
+npx skills add . --list
+npx skills add . --skill bilisub-notes -g -a codex -y
+```
+
+For this private GitHub repository, HTTPS works with your existing GitHub credentials:
+
+```bash
+npx skills add https://github.com/JackMeds/Video-Skill-Transcriber --skill bilisub-notes -g -a codex -y
+```
+
+SSH install also works after `ssh -T git@github.com` succeeds. On this machine SSH auth is not currently configured for GitHub, so prefer HTTPS or the local path.
+
+`npx skills` installs the skill instructions, not the Python project itself. Keep this repository cloned and dependencies installed. The skill includes `skills/bilisub-notes/scripts/bilisub`, a small launcher that finds the clone via `BILISUBNOTES_HOME` or the default local path.
+
+For live development on this machine, a symlink install is still useful because edits reflect immediately:
+
+```bash
+python install.py --target ~/.agents/skills
+```
+
+For routine updates after a pull:
+
+```bash
+git pull
+npx skills add . --skill bilisub-notes -g -a codex -y
 ```
 
 ## Safety Defaults

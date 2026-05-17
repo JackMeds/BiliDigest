@@ -4,6 +4,7 @@ Prefer `skills/bilisub-notes/SKILL.md`. This file remains for older agents that 
 
 Use the local BiliSubNotes CLI to export Bilibili subtitles and AI summaries from the user's own logged-in account.
 The shared login session is stored under the OS user data directory, not inside this Skill folder. Requests are intentionally slow by default for daily local automation.
+If this skill was installed by `npx skills`, use `scripts/bilisub ...` from the installed skill directory, or set `BILISUBNOTES_HOME` to the cloned repository path and run the normal Python commands.
 
 ```bash
 python -m tools.bilisub auth status

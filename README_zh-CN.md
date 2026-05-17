@@ -88,10 +88,34 @@ Skill 位于：
 skills/bilisub-notes/
 ```
 
-安装或刷新本机 Codex/OpenAI skill 软链接：
+仓库采用 Agent Skills 标准目录：每个 Skill 是一个目录，目录内必须有 `SKILL.md`。因此标准安装器可以直接发现它：
 
 ```bash
-python install.py --target ~/.codex/.agents/skills
+npx skills add . --list
+npx skills add . --skill bilisub-notes -g -a codex -y
+```
+
+如果从这个私有 GitHub 仓库安装，HTTPS 可以复用本机 GitHub 凭据：
+
+```bash
+npx skills add https://github.com/JackMeds/Video-Skill-Transcriber --skill bilisub-notes -g -a codex -y
+```
+
+SSH 形式也可以，但前提是 `ssh -T git@github.com` 能通过。本机当前 GitHub SSH 未打通，所以更建议用 HTTPS 或本地路径。
+
+`npx skills` 安装的是 Skill 指令，不会自动安装 Python 项目本体。仍然需要保留本仓库 clone 和 `.venv` 依赖。Skill 内置了 `skills/bilisub-notes/scripts/bilisub` 启动器，会通过 `BILISUBNOTES_HOME` 或默认本机路径找到真正的 CLI。
+
+本机开发时也可以继续用软链接安装，优点是改 Skill 文档后立即生效：
+
+```bash
+python install.py --target ~/.agents/skills
+```
+
+日常更新可以这样做：
+
+```bash
+git pull
+npx skills add . --skill bilisub-notes -g -a codex -y
 ```
 
 ## 安全默认值

@@ -14,8 +14,11 @@ def install_skill(target_dir=None):
     if not target_dir:
         # Default locations to check
         possible_targets = [
-            Path(".agent/skills"),
+            Path(".agents/skills"),
+            Path.home() / ".agents/skills",
+            Path.home() / ".codex/skills",
             Path.home() / ".codex/.agents/skills",
+            Path(".agent/skills"),
             Path.home() / ".agent/skills",
             Path.home() / ".config/opencode/skills" 
         ]
@@ -29,7 +32,7 @@ def install_skill(target_dir=None):
         
         # Fallback if none found
         if not target_dir:
-            target_dir = Path(".agent/skills")
+            target_dir = Path(".agents/skills")
             print(f"⚠️ No agent directory found. Creating default: {target_dir}")
 
     dest_path = Path(target_dir) / "bilisub-notes"
