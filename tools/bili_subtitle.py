@@ -2,7 +2,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-from .bili_client import BiliClient, BiliError, dated_output_dir, sanitize_filename
+from .bili_client import BiliClient, BiliError, RiskControl, dated_output_dir, sanitize_filename
 
 
 LANG_PRIORITY = ["zh-CN", "zh-Hans", "ai-zh", "zh", "zh-TW"]
@@ -34,6 +34,8 @@ def fetch_subtitle_json(client: BiliClient, subtitle_url: str) -> dict[str, Any]
     url = "https:" + subtitle_url if subtitle_url.startswith("//") else subtitle_url
     client.throttle()
     resp = client.session.get(url, timeout=20)
+    if resp.status_code == 412:
+        raise RiskControl("HTTP 412 while downloading subtitle: request paused for account safety")
     resp.raise_for_status()
     return resp.json()
 

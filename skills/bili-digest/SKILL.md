@@ -21,8 +21,10 @@ scripts/bilidigest auth session-path --json
 scripts/bilidigest auth login --json --no-wait
 scripts/bilidigest auth poll <qrcode_key> --json
 scripts/bilidigest list watch-later --limit 15
+scripts/bilidigest list watch-later --limit 600 --no-items
 scripts/bilidigest transcript <BV-or-url> --format md
 scripts/bilidigest summary <BV-or-url>
+scripts/bilidigest batch watch-later --limit 600 --fallback-summary --with-summary
 ```
 
 If the launcher cannot find the repository, set `BILIDIGEST_HOME` to the cloned BiliDigest path. When already inside the BiliDigest project root, these direct commands are equivalent:
@@ -35,11 +37,13 @@ python -m tools.bilidigest auth login
 python -m tools.bilidigest auth login --json --no-wait
 python -m tools.bilidigest auth poll <qrcode_key> --json
 python -m tools.bilidigest list watch-later --limit 15
+python -m tools.bilidigest list watch-later --limit 600 --no-items
 python -m tools.bilidigest list favorites --mid me
 python -m tools.bilidigest list favorite --media-id <id> --limit 15
 python -m tools.bilidigest transcript <BV-or-url> --format md
 python -m tools.bilidigest summary <BV-or-url>
 python -m tools.bilidigest batch watch-later --limit 15 --with-summary
+python -m tools.bilidigest batch watch-later --limit 600 --fallback-summary --with-summary
 ```
 
 ## Workflow
@@ -50,6 +54,24 @@ python -m tools.bilidigest batch watch-later --limit 15 --with-summary
 4. For a video, export Bilibili's existing subtitle first. Do not run ASR unless the subtitle export fails and the user asks for fallback transcription.
 5. Read the generated Markdown from `output/bilidigest/<date>/` and summarize or organize notes from that text.
 6. If Bilibili returns risk-control or login errors, stop and tell the user to re-login or retry later.
+
+## Batch Workflow
+
+For large Watch Later runs, prefer the resumable batch command:
+
+```bash
+scripts/bilidigest batch watch-later --limit 600 --fallback-summary --with-summary
+```
+
+The command stores local cache and state here:
+
+```text
+output/bilidigest/cache/watch-later.jsonl
+output/bilidigest/cache/watch-later.meta.json
+output/bilidigest/state/watch-later.json
+```
+
+Rerunning the same command resumes from the state file. Use `--refresh-list` when the user explicitly wants a fresh Watch Later list, `--retry-failed` when they want to retry previous failures, and `--no-resume` only when they want to ignore the old state.
 
 ## Chat Login Flow
 
@@ -82,3 +104,5 @@ Do not store session files inside individual Skill directories. Use `auth sessio
 Only process videos the user's own account can already access. Do not expose, print, or copy `.user_session.json`, cookies, API keys, or `.env` values into chat.
 
 The CLI intentionally waits about 8-12 seconds between API requests. Do not override the delay for routine daily automation unless the user explicitly asks. The legacy yt-dlp downloader also runs with slow sleeps and one concurrent fragment by default.
+
+For one-off large local batches, a modest override such as `BILIDIGEST_DELAY_SECONDS=6 BILIDIGEST_DELAY_JITTER_SECONDS=2` is acceptable when the user explicitly asks to process hundreds of videos. Do not start multiple BiliDigest batch jobs at the same time.

@@ -12,6 +12,8 @@ License: GPL-3.0-or-later.
 
 - Reads your Bilibili login session from a shared user data file, with legacy `.user_session.json` migration.
 - Lists Watch Later and Favorite folders/items.
+- Caches large Watch Later lists locally so agents do not refetch hundreds of items on every restart.
+- Writes a persistent batch state file for resume, skip-completed, and retry-failed workflows.
 - Exports existing Bilibili subtitles first, without running ASR by default.
 - Exports Bilibili AI Assistant summaries when available.
 - Writes Markdown, SRT, and JSON under `output/bilidigest/<date>/`.
@@ -64,6 +66,7 @@ python -m tools.bilidigest auth session-path --json
 ```bash
 # Watch Later
 python -m tools.bilidigest list watch-later --limit 15
+python -m tools.bilidigest list watch-later --limit 600 --no-items
 
 # Favorite folders for your own account
 python -m tools.bilidigest list favorites --mid me
@@ -80,9 +83,37 @@ python -m tools.bilidigest summary BVxxxxxxxxxx
 
 # Batch Watch Later
 python -m tools.bilidigest batch watch-later --limit 15 --with-summary
+python -m tools.bilidigest batch watch-later --limit 600 --fallback-summary --with-summary
 ```
 
 Legacy commands such as `python -m tools.auth --status`, `python -m tools.list --watch-later`, and `python -m tools.batch_run` still work as compatibility wrappers.
+
+### Batch Resume
+
+`batch watch-later` uses local cache and state files by default:
+
+```text
+output/bilidigest/cache/watch-later.jsonl
+output/bilidigest/cache/watch-later.meta.json
+output/bilidigest/state/watch-later.json
+```
+
+The default list cache TTL is 24 hours. For daily automation or after an agent restart, rerun the same `batch` command to resume. Completed videos are skipped, and previously failed videos are skipped unless explicitly retried.
+
+Common options:
+
+```bash
+# Force-refresh the Watch Later list
+python -m tools.bilidigest batch watch-later --limit 600 --refresh-list
+
+# Retry videos that failed earlier
+python -m tools.bilidigest batch watch-later --limit 600 --retry-failed --fallback-summary
+
+# Ignore the old state and process the current list again
+python -m tools.bilidigest batch watch-later --limit 600 --no-resume
+```
+
+If a video has no existing Bilibili subtitle, `--fallback-summary` attempts to export the Bilibili AI Assistant summary and records the item as `summary_only`. Login-expired and risk-control responses such as HTTP `412` or Bilibili `-352` save state and stop the batch.
 
 ## Agent Skill
 
@@ -126,6 +157,7 @@ npx skills add . --skill bili-digest -g -a codex -y
 
 - Batch commands default to `15` items.
 - Requests are deliberately slow by default: each API call waits about `8-12` seconds. You can tune this with `BILIDIGEST_DELAY_SECONDS` and `BILIDIGEST_DELAY_JITTER_SECONDS`.
+- For large batches, keep the default slow mode or use a modest setting such as `BILIDIGEST_DELAY_SECONDS=6 BILIDIGEST_DELAY_JITTER_SECONDS=2`; do not run multiple batch jobs concurrently.
 - The legacy video/audio downloader also uses one fragment at a time and passes slow `yt-dlp` sleep settings. Tune it with `BILIDIGEST_YTDLP_SLEEP_SECONDS` and `BILIDIGEST_YTDLP_MAX_SLEEP_SECONDS`.
 - Risk-control responses such as HTTP `412` or Bilibili `-352` stop batch processing.
 - Cookies, sessions, `.env`, and output files are ignored by Git.

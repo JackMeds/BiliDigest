@@ -10,6 +10,8 @@
 
 - 使用统一的用户数据目录 session，并兼容迁移旧版 `.user_session.json`。
 - 列出稍后再看、收藏夹目录、收藏夹内容。
+- 稍后再看列表会缓存到本地，避免 Agent 重启后反复拉取 500+ 条列表。
+- 批量任务带持久状态文件，支持断点续跑、跳过已完成、按需重试失败项。
 - 优先使用 B站已有字幕，不默认跑 ASR。
 - 可导出 B站 AI 小助手总结。
 - 输出到 `output/bilidigest/<日期>/`。
@@ -62,6 +64,7 @@ python -m tools.bilidigest auth session-path --json
 ```bash
 # 稍后再看
 python -m tools.bilidigest list watch-later --limit 15
+python -m tools.bilidigest list watch-later --limit 600 --no-items
 
 # 本人收藏夹目录
 python -m tools.bilidigest list favorites --mid me
@@ -78,9 +81,37 @@ python -m tools.bilidigest summary BVxxxxxxxxxx
 
 # 批量处理稍后再看
 python -m tools.bilidigest batch watch-later --limit 15 --with-summary
+python -m tools.bilidigest batch watch-later --limit 600 --fallback-summary --with-summary
 ```
 
 旧命令仍保留兼容：`python -m tools.auth --status`、`python -m tools.list --watch-later`、`python -m tools.batch_run`。
+
+### 批量处理和续跑
+
+`batch watch-later` 默认使用本地缓存和状态文件：
+
+```text
+output/bilidigest/cache/watch-later.jsonl
+output/bilidigest/cache/watch-later.meta.json
+output/bilidigest/state/watch-later.json
+```
+
+默认列表缓存有效期是 24 小时。日常自动化或 Hermes Agent 重启后，直接重复运行同一条 `batch` 命令即可续跑；已完成视频会跳过，之前失败的视频默认也会跳过，避免反复请求同一个视频。
+
+常用参数：
+
+```bash
+# 强制刷新稍后再看列表
+python -m tools.bilidigest batch watch-later --limit 600 --refresh-list
+
+# 重新尝试之前失败的视频
+python -m tools.bilidigest batch watch-later --limit 600 --retry-failed --fallback-summary
+
+# 忽略旧状态，从当前列表重新处理
+python -m tools.bilidigest batch watch-later --limit 600 --no-resume
+```
+
+如果视频没有 B站现成字幕，`--fallback-summary` 会尝试导出 B站 AI 小助手总结，并把该条记录为 `summary_only`。遇到登录失效、HTTP `412`、B站 `-352` 等风控信号时，批处理会保存状态并停止。
 
 ## Agent Skill
 
@@ -124,6 +155,7 @@ npx skills add . --skill bili-digest -g -a codex -y
 
 - 批量命令默认最多处理 `15` 条。
 - 请求默认故意很慢：每次 API 调用大约等待 `8-12` 秒。可以用 `BILIDIGEST_DELAY_SECONDS` 和 `BILIDIGEST_DELAY_JITTER_SECONDS` 调整。
+- 大批量处理建议使用默认慢速或稍微调到 `BILIDIGEST_DELAY_SECONDS=6 BILIDIGEST_DELAY_JITTER_SECONDS=2`，不要并发启动多个批处理。
 - 旧的视频/音频下载入口也会使用单 fragment 和慢速 `yt-dlp` sleep 参数。可以用 `BILIDIGEST_YTDLP_SLEEP_SECONDS` 和 `BILIDIGEST_YTDLP_MAX_SLEEP_SECONDS` 调整。
 - 遇到 HTTP `412` 或 B站 `-352` 等风控信号会停止批处理。
 - Cookie、Session、`.env` 和输出目录均被 Git 忽略。

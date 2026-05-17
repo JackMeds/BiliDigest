@@ -1,7 +1,7 @@
 from pathlib import Path
 from typing import Any
 
-from .bili_client import BiliClient, BiliError, dated_output_dir, sanitize_filename
+from .bili_client import BiliClient, BiliError, LoginRequired, RiskControl, dated_output_dir, sanitize_filename
 
 
 def duration(seconds: int) -> str:
@@ -47,6 +47,10 @@ def export_summary(client: BiliClient, value: str, out_dir: Path | None = None) 
         ignore_error=True,
     )
     if body.get("code") != 0:
+        if body.get("code") == -101:
+            raise LoginRequired(body.get("message") or "Bilibili login required")
+        if body.get("code") in {-352, -412}:
+            raise RiskControl(body.get("message") or "Bilibili risk control was triggered")
         raise BiliError(body.get("message") or "Bilibili AI summary is unavailable", code=body.get("code"))
     result = ((body.get("data") or {}).get("model_result") or {})
     if not result.get("result_type"):
