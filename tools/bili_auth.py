@@ -1,14 +1,12 @@
 import argparse
 import json
 import os
-import subprocess
-import sys
-import tempfile
 import time
 from pathlib import Path
 
 import qrcode
 import requests
+from yt_dlp.cookies import extract_cookies_from_browser
 
 from .bili_client import BiliClient, LoginRequired, OUTPUT_DIR, SESSION_FILE, LEGACY_SESSION_FILE, load_cookies, save_cookies
 
@@ -17,6 +15,30 @@ QR_API_URL = "https://passport.bilibili.com/x/passport-login/web/qrcode/generate
 QR_POLL_URL = "https://passport.bilibili.com/x/passport-login/web/qrcode/poll"
 BILIBILI_COOKIE_NAMES = {"SESSDATA", "bili_jct", "DedeUserID", "DedeUserID__ckMd5", "sid", "buvid3", "buvid4", "b_nut", "_uuid", "bili_ticket", "refresh_token"}
 LOGIN_POLL_INTERVAL_SECONDS = float(os.environ.get("BILISUB_LOGIN_POLL_INTERVAL_SECONDS", "5"))
+
+
+class QuietCookieLogger:
+    def __init__(self):
+        self.messages: list[str] = []
+
+    def debug(self, message, *args, **kwargs) -> None:
+        if message:
+            self.messages.append(str(message))
+
+    def info(self, message, *args, **kwargs) -> None:
+        if message:
+            self.messages.append(str(message))
+
+    def warning(self, message, *args, **kwargs) -> None:
+        if message:
+            self.messages.append(str(message))
+
+    def error(self, message, *args, **kwargs) -> None:
+        if message:
+            self.messages.append(str(message))
+
+    def progress_bar(self):
+        return None
 
 
 def status_payload() -> dict[str, object]:
@@ -171,43 +193,23 @@ def parse_netscape_cookie_file(path: Path) -> dict[str, str]:
     return cookies
 
 
+def cookiejar_to_bilibili_cookies(cookiejar) -> dict[str, str]:
+    cookies: dict[str, str] = {}
+    for cookie in cookiejar:
+        domain = getattr(cookie, "domain", "") or ""
+        name = getattr(cookie, "name", "") or ""
+        value = getattr(cookie, "value", "") or ""
+        if "bilibili.com" in domain and (name in BILIBILI_COOKIE_NAMES or name.startswith("buvid")):
+            cookies[name] = value
+    return cookies
+
+
 def import_browser(browser: str, as_json: bool = False) -> int:
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-    with tempfile.NamedTemporaryFile(prefix="bilisub-browser-", suffix=".cookies.txt", delete=False) as tmp:
-        cookie_path = Path(tmp.name)
-    cmd = [
-        sys.executable,
-        "-m",
-        "yt_dlp",
-        "--cookies-from-browser",
-        browser,
-        "--cookies",
-        str(cookie_path),
-        "--skip-download",
-        "--quiet",
-        "https://www.bilibili.com",
-    ]
     try:
-        try:
-            result = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
-        except subprocess.TimeoutExpired:
-            payload = {
-                "status": "failed",
-                "browser": browser,
-                "message": "Timed out while importing browser cookies. Close the browser or use QR login, then retry later.",
-            }
-            print_payload(payload, as_json)
-            return 1
-        if result.returncode != 0:
-            payload = {
-                "status": "failed",
-                "browser": browser,
-                "message": "Failed to import browser cookies. Close the browser and retry if the cookie database is locked.",
-                "stderr": result.stderr.strip()[-800:],
-            }
-            print_payload(payload, as_json)
-            return 1
-        cookies = parse_netscape_cookie_file(cookie_path)
+        logger = QuietCookieLogger()
+        cookiejar = extract_cookies_from_browser(browser, logger=logger)
+        cookies = cookiejar_to_bilibili_cookies(cookiejar)
         if not cookies.get("SESSDATA"):
             payload = {"status": "failed", "browser": browser, "message": "No Bilibili SESSDATA cookie found in browser export"}
             print_payload(payload, as_json)
@@ -222,11 +224,15 @@ def import_browser(browser: str, as_json: bool = False) -> int:
         }
         print_payload(payload, as_json)
         return 0
-    finally:
-        try:
-            cookie_path.unlink()
-        except FileNotFoundError:
-            pass
+    except Exception as exc:
+        payload = {
+            "status": "failed",
+            "browser": browser,
+            "message": "Failed to import browser cookies. Close the browser and retry if the cookie database is locked.",
+            "error": str(exc)[-800:],
+        }
+        print_payload(payload, as_json)
+        return 1
 
 
 def main(argv: list[str] | None = None) -> int:

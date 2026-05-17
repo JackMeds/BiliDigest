@@ -23,6 +23,13 @@ class FakeCookies:
         return dict(self._cookies)
 
 
+class FakeBrowserCookie:
+    def __init__(self, domain, name, value):
+        self.domain = domain
+        self.name = name
+        self.value = value
+
+
 def test_create_login_request_writes_agent_payload(monkeypatch, tmp_path):
     monkeypatch.setattr(bili_auth, "OUTPUT_DIR", tmp_path)
     monkeypatch.setattr(
@@ -114,20 +121,15 @@ def test_parse_netscape_cookie_file_keeps_bilibili_cookies(tmp_path):
 def test_import_browser_uses_yt_dlp_and_saves_session(monkeypatch, tmp_path, capsys):
     saved = {}
 
-    def fake_run(cmd, capture_output, text, timeout):
-        cookie_path = tmp_path / "edge.cookies.txt"
-        cookie_path.write_text(".bilibili.com\tTRUE\t/\tFALSE\t0\tSESSDATA\tabc\n", encoding="utf-8")
-        cmd_cookie_path = cmd[cmd.index("--cookies") + 1]
-        tmp_cookie_path = type(cookie_path)(cmd_cookie_path)
-        tmp_cookie_path.write_text(cookie_path.read_text(encoding="utf-8"), encoding="utf-8")
-
-        class Result:
-            returncode = 0
-            stderr = ""
-
-        return Result()
-
-    monkeypatch.setattr(bili_auth.subprocess, "run", fake_run)
+    monkeypatch.setattr(
+        bili_auth,
+        "extract_cookies_from_browser",
+        lambda browser, logger: [
+            FakeBrowserCookie(".bilibili.com", "SESSDATA", "abc"),
+            FakeBrowserCookie(".bilibili.com", "bili_jct", "csrf"),
+            FakeBrowserCookie(".example.com", "SESSDATA", "wrong"),
+        ],
+    )
     monkeypatch.setattr(bili_auth, "save_cookies", lambda cookies: saved.update(cookies))
     monkeypatch.setattr(bili_auth, "SESSION_FILE", tmp_path / "session.json")
 
@@ -137,14 +139,14 @@ def test_import_browser_uses_yt_dlp_and_saves_session(monkeypatch, tmp_path, cap
     assert code == 0
     assert output["status"] == "imported"
     assert output["browser"] == "edge"
-    assert saved == {"SESSDATA": "abc"}
+    assert saved == {"SESSDATA": "abc", "bili_jct": "csrf"}
 
 
-def test_import_browser_timeout_returns_json_failure(monkeypatch, capsys):
-    def fake_run(cmd, capture_output, text, timeout):
-        raise bili_auth.subprocess.TimeoutExpired(cmd, timeout)
+def test_import_browser_error_returns_json_failure(monkeypatch, capsys):
+    def fake_extract(browser, logger):
+        raise RuntimeError("cookie database is locked")
 
-    monkeypatch.setattr(bili_auth.subprocess, "run", fake_run)
+    monkeypatch.setattr(bili_auth, "extract_cookies_from_browser", fake_extract)
 
     code = bili_auth.import_browser("edge", as_json=True)
     output = json.loads(capsys.readouterr().out)
@@ -152,4 +154,5 @@ def test_import_browser_timeout_returns_json_failure(monkeypatch, capsys):
     assert code == 1
     assert output["status"] == "failed"
     assert output["browser"] == "edge"
-    assert "Timed out" in output["message"]
+    assert "Failed to import" in output["message"]
+    assert "locked" in output["error"]
