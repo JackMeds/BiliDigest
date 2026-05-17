@@ -1,0 +1,3 @@
+name: bili-digest
+description: Summarize Bilibili Watch Later and Favorites into local Markdown for agent notes.
+entrypoint: SKILL.md

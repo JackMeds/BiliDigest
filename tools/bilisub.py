@@ -100,8 +100,8 @@ def cmd_batch(args: argparse.Namespace) -> int:
     return 0
 
 
-def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(prog="bilisub", description="BiliSubNotes 哔哩字幕笔记 CLI")
+def build_parser(prog: str = "bilidigest") -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(prog=prog, description="BiliDigest 哔哩摘要笔记 CLI")
     sub = parser.add_subparsers(dest="command", required=True)
 
     auth = sub.add_parser("auth", help="B站登录状态和扫码登录")
@@ -137,8 +137,8 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def main(argv: list[str] | None = None) -> int:
-    parser = build_parser()
+def main(argv: list[str] | None = None, prog: str = "bilidigest") -> int:
+    parser = build_parser(prog)
     args = parser.parse_args(argv)
     try:
         return args.func(args)
@@ -151,4 +151,4 @@ def main(argv: list[str] | None = None) -> int:
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    raise SystemExit(main(prog="bilisub"))

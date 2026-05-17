@@ -15,8 +15,8 @@ import requests
 ROOT_DIR = Path(__file__).parent.parent.resolve()
 LEGACY_SESSION_FILE = ROOT_DIR / ".user_session.json"
 OUTPUT_DIR = ROOT_DIR / "output"
-DEFAULT_DELAY_SECONDS = float(os.environ.get("BILISUB_DELAY_SECONDS", "8.0"))
-DEFAULT_DELAY_JITTER_SECONDS = float(os.environ.get("BILISUB_DELAY_JITTER_SECONDS", "4.0"))
+DEFAULT_DELAY_SECONDS = float(os.environ.get("BILIDIGEST_DELAY_SECONDS", os.environ.get("BILISUB_DELAY_SECONDS", "8.0")))
+DEFAULT_DELAY_JITTER_SECONDS = float(os.environ.get("BILIDIGEST_DELAY_JITTER_SECONDS", os.environ.get("BILISUB_DELAY_JITTER_SECONDS", "4.0")))
 USER_AGENT = (
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
     "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0.0.0 Safari/537.36"
@@ -25,12 +25,20 @@ USER_AGENT = (
 
 def user_data_dir() -> Path:
     if platform.system() == "Darwin":
+        return Path.home() / "Library" / "Application Support" / "BiliDigest"
+    root = os.environ.get("XDG_DATA_HOME")
+    return Path(root).expanduser() / "bilidigest" if root else Path.home() / ".local" / "share" / "bilidigest"
+
+
+def old_user_data_dir() -> Path:
+    if platform.system() == "Darwin":
         return Path.home() / "Library" / "Application Support" / "BiliSubNotes"
     root = os.environ.get("XDG_DATA_HOME")
     return Path(root).expanduser() / "bilisubnotes" if root else Path.home() / ".local" / "share" / "bilisubnotes"
 
 
 SESSION_FILE = user_data_dir() / "session.json"
+OLD_APP_SESSION_FILE = old_user_data_dir() / "session.json"
 
 
 class BiliError(RuntimeError):
@@ -52,11 +60,12 @@ class RiskControl(BiliError):
 
 def load_cookies(path: Path | None = None) -> dict[str, str]:
     session_path = path or SESSION_FILE
-    if not session_path.exists() and path is None and LEGACY_SESSION_FILE.exists():
-        cookies = _read_cookie_json(LEGACY_SESSION_FILE)
-        if cookies:
-            save_cookies(cookies)
-        return cookies
+    if not session_path.exists() and path is None:
+        for legacy_path in (OLD_APP_SESSION_FILE, LEGACY_SESSION_FILE):
+            cookies = _read_cookie_json(legacy_path)
+            if cookies:
+                save_cookies(cookies)
+                return cookies
     return _read_cookie_json(session_path)
 
 
@@ -89,7 +98,7 @@ def sanitize_filename(value: str, max_len: int = 90) -> str:
 
 
 def dated_output_dir() -> Path:
-    out_dir = OUTPUT_DIR / "bilisub" / time.strftime("%Y-%m-%d")
+    out_dir = OUTPUT_DIR / "bilidigest" / time.strftime("%Y-%m-%d")
     out_dir.mkdir(parents=True, exist_ok=True)
     return out_dir
 

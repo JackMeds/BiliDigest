@@ -3,9 +3,9 @@ requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "bilisubnotes"
+name = "bilidigest"
 version = "0.3.0"
-description = "Private Bilibili subtitle and AI-summary exporter for agent notes"
+description = "Bilibili Watch Later and Favorites digest exporter for agent notes"
 readme = "README.md"
 requires-python = ">=3.10"
 license = {text = "GPL-3.0-or-later"}

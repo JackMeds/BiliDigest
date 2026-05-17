@@ -10,7 +10,7 @@ def get_cookies():
 
 
 def main():
-    parser = argparse.ArgumentParser(description="BiliSubNotes B站认证工具")
+    parser = argparse.ArgumentParser(description="BiliDigest B站认证工具")
     parser.add_argument("--status", action="store_true", help="仅检查登录状态")
     parser.add_argument("--json", action="store_true", help="输出机器可读 JSON")
     parser.add_argument("--no-wait", action="store_true", help="只生成二维码，不阻塞等待扫码")

@@ -1,12 +1,12 @@
-BiliSubNotes
+BiliDigest
 Copyright (C) 2026 JackMeds
 
 This project is licensed under GPL-3.0-or-later.
 
 Implementation notes:
 
-- BiliSubNotes is a Python CLI and Agent Skill for exporting subtitles and Bilibili AI summaries from the user's own logged-in account.
+- BiliDigest is a Python CLI and Agent Skill for summarizing and organizing videos from the user's own logged-in Bilibili Watch Later and Favorites lists.
 - The project intentionally keeps a small local CLI surface and does not include BiliTools' Tauri/Vue/Rust desktop UI.
 - Parts of the implementation strategy, API boundaries, login/session handling, risk-control behavior, and safety defaults were informed by reading the open-source BiliTools project:
   https://github.com/btjawa/BiliTools
-- BiliTools is licensed under GPL-3.0-or-later. Redistribution of BiliSubNotes should preserve this notice and the GPL-3.0-or-later license terms.
+- BiliTools is licensed under GPL-3.0-or-later. Redistribution of BiliDigest should preserve this notice and the GPL-3.0-or-later license terms.

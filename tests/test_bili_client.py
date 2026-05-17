@@ -1,5 +1,6 @@
 import pytest
 
+from tools import bili_client
 from tools.bili_client import BiliClient, LoginRequired, RiskControl, load_cookies
 
 
@@ -55,3 +56,18 @@ def test_load_cookies_reads_explicit_session_file(tmp_path):
     session.write_text('{"SESSDATA": "abc", "empty": null}', encoding="utf-8")
 
     assert load_cookies(session) == {"SESSDATA": "abc"}
+
+
+def test_load_cookies_migrates_old_app_session(monkeypatch, tmp_path):
+    new_session = tmp_path / "BiliDigest" / "session.json"
+    old_session = tmp_path / "BiliSubNotes" / "session.json"
+    legacy_session = tmp_path / ".user_session.json"
+    old_session.parent.mkdir()
+    old_session.write_text('{"SESSDATA": "old"}', encoding="utf-8")
+
+    monkeypatch.setattr(bili_client, "SESSION_FILE", new_session)
+    monkeypatch.setattr(bili_client, "OLD_APP_SESSION_FILE", old_session)
+    monkeypatch.setattr(bili_client, "LEGACY_SESSION_FILE", legacy_session)
+
+    assert load_cookies() == {"SESSDATA": "old"}
+    assert new_session.exists()

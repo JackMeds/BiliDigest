@@ -10,8 +10,8 @@ from pathlib import Path
 from .utils import check_environment, get_output_dir
 from .bili_client import SESSION_FILE, load_cookies
 
-YTDLP_SLEEP_SECONDS = os.environ.get("BILISUB_YTDLP_SLEEP_SECONDS", "8")
-YTDLP_MAX_SLEEP_SECONDS = os.environ.get("BILISUB_YTDLP_MAX_SLEEP_SECONDS", "14")
+YTDLP_SLEEP_SECONDS = os.environ.get("BILIDIGEST_YTDLP_SLEEP_SECONDS", os.environ.get("BILISUB_YTDLP_SLEEP_SECONDS", "8"))
+YTDLP_MAX_SLEEP_SECONDS = os.environ.get("BILIDIGEST_YTDLP_MAX_SLEEP_SECONDS", os.environ.get("BILISUB_YTDLP_MAX_SLEEP_SECONDS", "14"))
 
 
 def create_temp_cookie_file(cookies):

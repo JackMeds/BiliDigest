@@ -1,10 +1,10 @@
 ---
-name: bilisub-notes
-description: Export subtitles and Bilibili AI summaries from the user's own logged-in Watch Later and Favorites lists for local agent notes.
-origin: BiliSubNotes
+name: bili-digest
+description: Summarize and organize the user's own logged-in Bilibili Watch Later and Favorites lists for local agent notes.
+origin: BiliDigest
 ---
 
-# BiliSubNotes
+# BiliDigest
 
 Use this skill when the user asks to summarize, inspect, or take notes from Bilibili Watch Later, Favorites, or a specific Bilibili video.
 
@@ -15,31 +15,31 @@ This repository is GPL-3.0-or-later and includes attribution notes for BiliTools
 Prefer the bundled launcher next to this `SKILL.md` so the skill also works when installed outside the repository:
 
 ```bash
-scripts/bilisub auth status
-scripts/bilisub auth import-browser edge
-scripts/bilisub auth session-path --json
-scripts/bilisub auth login --json --no-wait
-scripts/bilisub auth poll <qrcode_key> --json
-scripts/bilisub list watch-later --limit 15
-scripts/bilisub transcript <BV-or-url> --format md
-scripts/bilisub summary <BV-or-url>
+scripts/bilidigest auth status
+scripts/bilidigest auth import-browser edge
+scripts/bilidigest auth session-path --json
+scripts/bilidigest auth login --json --no-wait
+scripts/bilidigest auth poll <qrcode_key> --json
+scripts/bilidigest list watch-later --limit 15
+scripts/bilidigest transcript <BV-or-url> --format md
+scripts/bilidigest summary <BV-or-url>
 ```
 
-If the launcher cannot find the repository, set `BILISUBNOTES_HOME` to the cloned BiliSubNotes path. When already inside the BiliSubNotes project root, these direct commands are equivalent:
+If the launcher cannot find the repository, set `BILIDIGEST_HOME` to the cloned BiliDigest path. When already inside the BiliDigest project root, these direct commands are equivalent:
 
 ```bash
-python -m tools.bilisub auth status
-python -m tools.bilisub auth import-browser edge
-python -m tools.bilisub auth session-path --json
-python -m tools.bilisub auth login
-python -m tools.bilisub auth login --json --no-wait
-python -m tools.bilisub auth poll <qrcode_key> --json
-python -m tools.bilisub list watch-later --limit 15
-python -m tools.bilisub list favorites --mid me
-python -m tools.bilisub list favorite --media-id <id> --limit 15
-python -m tools.bilisub transcript <BV-or-url> --format md
-python -m tools.bilisub summary <BV-or-url>
-python -m tools.bilisub batch watch-later --limit 15 --with-summary
+python -m tools.bilidigest auth status
+python -m tools.bilidigest auth import-browser edge
+python -m tools.bilidigest auth session-path --json
+python -m tools.bilidigest auth login
+python -m tools.bilidigest auth login --json --no-wait
+python -m tools.bilidigest auth poll <qrcode_key> --json
+python -m tools.bilidigest list watch-later --limit 15
+python -m tools.bilidigest list favorites --mid me
+python -m tools.bilidigest list favorite --media-id <id> --limit 15
+python -m tools.bilidigest transcript <BV-or-url> --format md
+python -m tools.bilidigest summary <BV-or-url>
+python -m tools.bilidigest batch watch-later --limit 15 --with-summary
 ```
 
 ## Workflow
@@ -48,7 +48,7 @@ python -m tools.bilisub batch watch-later --limit 15 --with-summary
 2. If login is missing and the user uses Microsoft Edge, prefer `auth import-browser edge` before QR login.
 3. For a list request, fetch at most 15 items unless the user explicitly asks for a smaller number.
 4. For a video, export Bilibili's existing subtitle first. Do not run ASR unless the subtitle export fails and the user asks for fallback transcription.
-5. Read the generated Markdown from `output/bilisub/<date>/` and summarize or organize notes from that text.
+5. Read the generated Markdown from `output/bilidigest/<date>/` and summarize or organize notes from that text.
 6. If Bilibili returns risk-control or login errors, stop and tell the user to re-login or retry later.
 
 ## Chat Login Flow
@@ -56,13 +56,13 @@ python -m tools.bilisub batch watch-later --limit 15 --with-summary
 For chat surfaces such as Hermes Agent, Telegram, or a TUI, do not block forever inside an interactive login command. Run:
 
 ```bash
-python -m tools.bilisub auth login --json --no-wait
+python -m tools.bilidigest auth login --json --no-wait
 ```
 
 Send the returned `login_url` or `qr_image` to the user. Then poll with:
 
 ```bash
-python -m tools.bilisub auth poll <qrcode_key> --json
+python -m tools.bilidigest auth poll <qrcode_key> --json
 ```
 
 Treat `logged_in` as success, `expired` as a request to regenerate the QR code, `scanned` as waiting for phone confirmation, and `pending` as still waiting for the scan.
@@ -72,7 +72,7 @@ Treat `logged_in` as success, `expired` as a request to regenerate the QR code, 
 The shared macOS session path is:
 
 ```text
-~/Library/Application Support/BiliSubNotes/session.json
+~/Library/Application Support/BiliDigest/session.json
 ```
 
 Do not store session files inside individual Skill directories. Use `auth session-path --json` to confirm where the CLI is reading from.

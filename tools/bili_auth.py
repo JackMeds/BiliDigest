@@ -8,13 +8,13 @@ import qrcode
 import requests
 from yt_dlp.cookies import extract_cookies_from_browser
 
-from .bili_client import BiliClient, LoginRequired, OUTPUT_DIR, SESSION_FILE, LEGACY_SESSION_FILE, load_cookies, save_cookies
+from .bili_client import BiliClient, LoginRequired, OUTPUT_DIR, SESSION_FILE, OLD_APP_SESSION_FILE, LEGACY_SESSION_FILE, load_cookies, save_cookies
 
 
 QR_API_URL = "https://passport.bilibili.com/x/passport-login/web/qrcode/generate"
 QR_POLL_URL = "https://passport.bilibili.com/x/passport-login/web/qrcode/poll"
 BILIBILI_COOKIE_NAMES = {"SESSDATA", "bili_jct", "DedeUserID", "DedeUserID__ckMd5", "sid", "buvid3", "buvid4", "b_nut", "_uuid", "bili_ticket", "refresh_token"}
-LOGIN_POLL_INTERVAL_SECONDS = float(os.environ.get("BILISUB_LOGIN_POLL_INTERVAL_SECONDS", "5"))
+LOGIN_POLL_INTERVAL_SECONDS = float(os.environ.get("BILIDIGEST_LOGIN_POLL_INTERVAL_SECONDS", os.environ.get("BILISUB_LOGIN_POLL_INTERVAL_SECONDS", "5")))
 
 
 class QuietCookieLogger:
@@ -45,13 +45,14 @@ def status_payload() -> dict[str, object]:
     try:
         data = BiliClient(delay=0).login_status()
     except LoginRequired as exc:
-        return {"status": "not_logged_in", "message": str(exc), "session_path": str(SESSION_FILE), "legacy_session_path": str(LEGACY_SESSION_FILE)}
+        return {"status": "not_logged_in", "message": str(exc), "session_path": str(SESSION_FILE), "old_app_session_path": str(OLD_APP_SESSION_FILE), "legacy_session_path": str(LEGACY_SESSION_FILE)}
     return {
         "status": "logged_in",
         "uname": data.get("uname"),
         "mid": data.get("mid"),
         "vip": data.get("vipStatus") == 1,
         "session_path": str(SESSION_FILE),
+        "old_app_session_path": str(OLD_APP_SESSION_FILE),
         "legacy_session_path": str(LEGACY_SESSION_FILE),
     }
 
@@ -115,7 +116,7 @@ def create_login_request() -> dict[str, object]:
         "login_url": qrcode_url,
         "qrcode_key": qrcode_key,
         "qr_image": str(img_path),
-        "poll_command": f"python -m tools.bilisub auth poll {qrcode_key} --json",
+        "poll_command": f"python -m tools.bilidigest auth poll {qrcode_key} --json",
         "session_path": str(SESSION_FILE),
     }
 
@@ -236,7 +237,7 @@ def import_browser(browser: str, as_json: bool = False) -> int:
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="BiliSubNotes B站登录工具")
+    parser = argparse.ArgumentParser(description="BiliDigest B站登录工具")
     parser.add_argument("action", nargs="?", choices=["status", "login", "poll", "import-browser", "session-path"], default="login")
     parser.add_argument("value", nargs="?")
     parser.add_argument("--json", action="store_true", help="输出机器可读 JSON")
@@ -253,7 +254,7 @@ def main(argv: list[str] | None = None) -> int:
             parser.error("auth import-browser requires browser name, e.g. edge")
         return import_browser(args.value, args.json)
     if args.action == "session-path":
-        payload = {"status": "ok", "session_path": str(SESSION_FILE), "legacy_session_path": str(LEGACY_SESSION_FILE), "has_session": bool(load_cookies())}
+        payload = {"status": "ok", "session_path": str(SESSION_FILE), "old_app_session_path": str(OLD_APP_SESSION_FILE), "legacy_session_path": str(LEGACY_SESSION_FILE), "has_session": bool(load_cookies())}
         print_payload(payload, args.json)
         return 0
     return login(args.json, args.no_wait)

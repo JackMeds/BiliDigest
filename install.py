@@ -6,9 +6,9 @@ import shutil
 
 def install_skill(target_dir=None):
     """
-    Installs the BiliSubNotes skill into the Agent's skills directory.
+    Installs the BiliDigest skill into the Agent's skills directory.
     """
-    source_path = (Path(__file__).parent / "skills" / "bilisub-notes").resolve()
+    source_path = (Path(__file__).parent / "skills" / "bili-digest").resolve()
     
     # 2. Determine Target
     if not target_dir:
@@ -35,7 +35,7 @@ def install_skill(target_dir=None):
             target_dir = Path(".agents/skills")
             print(f"⚠️ No agent directory found. Creating default: {target_dir}")
 
-    dest_path = Path(target_dir) / "bilisub-notes"
+    dest_path = Path(target_dir) / "bili-digest"
     
     # 3. Installation (Symlink preferred for updates)
     print(f"🚀 Installing from {source_path} to {dest_path}...")
@@ -60,7 +60,7 @@ def install_skill(target_dir=None):
         print("✅ Success! Installed via Copy.")
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Install BiliSubNotes Skill to Agent")
+    parser = argparse.ArgumentParser(description="Install BiliDigest Skill to Agent")
     parser.add_argument("--target", "-t", help="Target skills directory (e.g. .agent/skills)")
     args = parser.parse_args()
     

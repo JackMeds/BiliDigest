@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+if [[ -n "${BILIDIGEST_HOME:-}" ]]; then
+  repo_root="$BILIDIGEST_HOME"
+else
+  repo_root="/Users/a15300/code/02-lab/BiliDigest"
+fi
+
+if [[ ! -d "$repo_root" ]]; then
+  echo "BiliDigest repo not found. Set BILIDIGEST_HOME to the cloned repository path." >&2
+  exit 1
+fi
+
+if [[ -x "$repo_root/.venv/bin/python" ]]; then
+  python_bin="$repo_root/.venv/bin/python"
+else
+  python_bin="${PYTHON:-python3}"
+fi
+
+cd "$repo_root"
+exec "$python_bin" -m tools.bilidigest "$@"

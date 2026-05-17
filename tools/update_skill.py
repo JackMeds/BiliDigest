@@ -9,7 +9,7 @@ from pathlib import Path
 import re
 
 REPO_OWNER = "JackMeds"
-REPO_NAME = "Video-Skill-Transcriber"
+REPO_NAME = "BiliDigest"
 API_URL = f"https://api.github.com/repos/{REPO_OWNER}/{REPO_NAME}/releases/latest"
 
 def get_current_version():
@@ -76,7 +76,7 @@ def update_via_zip():
             # Note: GitHub zip usually contains a top-level directory (e.g. Repo-v1.0/)
             # We need to strip it or handle it.
             # If using custom asset created by our workflow, it might be flat or nested depending on `zip` command.
-            # Our `release.yml` uses `zip -r Video-Skill-Transcriber-vX.X.zip .` which makes it ROOT based (no extra folder usually if ran inside).
+            # Our `release.yml` uses `zip -r BiliDigest-vX.X.zip .` which makes it ROOT based (no extra folder usually if ran inside).
             # Wait, `zip -r file.zip .` includes `.` structure.
             
             # Let's extract to temp and move

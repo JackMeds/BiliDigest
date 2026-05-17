@@ -27,7 +27,7 @@ async def lifespan(app: FastAPI):
     # Cleanup
     pass
 
-app = FastAPI(title="Video Skill API", description="Remote interface for Video-Skill-Transcriber")
+app = FastAPI(title="BiliDigest API", description="Remote interface for BiliDigest")
 
 @app.post("/v1/transcribe")
 async def api_transcribe(
