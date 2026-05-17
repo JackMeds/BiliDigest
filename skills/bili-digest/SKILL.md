@@ -68,10 +68,17 @@ The command stores local cache and state here:
 ```text
 output/bilidigest/cache/watch-later.jsonl
 output/bilidigest/cache/watch-later.meta.json
+output/bilidigest/snapshots/watch-later.json
 output/bilidigest/state/watch-later.json
 ```
 
-Rerunning the same command resumes from the state file. Use `--refresh-list` when the user explicitly wants a fresh Watch Later list, `--retry-failed` when they want to retry previous failures, and `--no-resume` only when they want to ignore the old state.
+List commands return the remote `total`, so agents can use `--limit 1` for fast size checks. Rerunning the same batch command resumes from the state file. Use `--refresh-list` when the user explicitly wants a fresh Watch Later list, `--retry-failed` when they want to retry previous failures, and `--no-resume` only when they want to ignore the old state.
+
+For daily automation, refresh the list and process only newly added items:
+
+```bash
+scripts/bilidigest batch watch-later --limit 600 --refresh-list --only-new --fallback-summary
+```
 
 ## Chat Login Flow
 

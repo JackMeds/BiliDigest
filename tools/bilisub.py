@@ -6,7 +6,12 @@ import time
 from . import bili_auth
 from .bili_client import BiliClient, BiliError, RiskControl, dated_output_dir
 from .bili_batch import DEFAULT_CACHE_TTL_SECONDS, get_watch_later_items, load_state, save_state
-from .bili_library import favorite_folders, favorite_items, watch_later, write_jsonl
+from .bili_library import (
+    favorite_folders_with_total,
+    favorite_items_with_total,
+    watch_later_with_total,
+    write_jsonl,
+)
 from .bili_subtitle import export_transcript
 from .bili_summary import export_summary
 
@@ -34,8 +39,9 @@ def cmd_list(args: argparse.Namespace) -> int:
     out_dir = dated_output_dir()
     if args.kind == "watch-later":
         if args.no_cache:
-            items = watch_later(client, args.limit)
-            cache_info = {"source": "network", "cache": "disabled"}
+            result = watch_later_with_total(client, args.limit)
+            items = result["items"]
+            cache_info = {"source": "network", "cache": "disabled", "total": result.get("total")}
         else:
             items, cache_info = get_watch_later_items(
                 client,
@@ -45,22 +51,24 @@ def cmd_list(args: argparse.Namespace) -> int:
                 progress=lambda message: print(message, file=sys.stderr, flush=True),
             )
         path = write_jsonl(items, "watch-later", out_dir)
-        payload = {"count": len(items), "path": str(path), "cache": cache_info}
+        payload = {"count": len(items), "total": cache_info.get("total"), "path": str(path), "cache": cache_info}
         if not args.no_items:
             payload["items"] = items
         print_json(payload)
         return 0
     if args.kind == "favorites":
-        items = favorite_folders(client, args.mid)
+        result = favorite_folders_with_total(client, args.mid)
+        items = result["items"]
         path = write_jsonl(items, "favorite-folders", out_dir)
-        print_json({"count": len(items), "path": str(path), "items": items})
+        print_json({"count": len(items), "total": result.get("total"), "path": str(path), "items": items})
         return 0
     if args.kind == "favorite":
         if not args.media_id:
             raise BiliError("--media-id is required for favorite list")
-        items = favorite_items(client, int(args.media_id), args.limit)
+        result = favorite_items_with_total(client, int(args.media_id), args.limit)
+        items = result["items"]
         path = write_jsonl(items, f"favorite-{args.media_id}", out_dir)
-        print_json({"count": len(items), "path": str(path), "items": items})
+        print_json({"count": len(items), "total": result.get("total"), "path": str(path), "items": items})
         return 0
     raise BiliError(f"Unknown list kind: {args.kind}")
 
@@ -89,6 +97,13 @@ def cmd_batch(args: argparse.Namespace) -> int:
         refresh=args.refresh_list,
         progress=lambda message: print(message, file=sys.stderr, flush=True),
     )
+    if args.only_new:
+        snapshot = cache_info.get("snapshot") if isinstance(cache_info.get("snapshot"), dict) else {}
+        added_bvids = {item.get("bvid") for item in snapshot.get("added", []) if item.get("bvid")}
+        if added_bvids:
+            items = [item for item in items if item.get("bvid") in added_bvids]
+        else:
+            items = []
     state = load_state("watch-later")
     if not args.resume:
         state = {
@@ -247,6 +262,7 @@ def build_parser(prog: str = "bilidigest") -> argparse.ArgumentParser:
     batch.add_argument("--resume", dest="resume", action="store_true", default=True, help="从状态文件续跑，默认开启")
     batch.add_argument("--no-resume", dest="resume", action="store_false", help="忽略旧状态，从当前列表重新处理")
     batch.add_argument("--retry-failed", action="store_true", help="重新处理状态文件里之前失败的视频")
+    batch.add_argument("--only-new", action="store_true", help="只处理本次刷新列表快照中新增的视频，通常配合 --refresh-list")
     batch.set_defaults(func=cmd_batch)
 
     return parser

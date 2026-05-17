@@ -11,6 +11,7 @@ def main():
     parser.add_argument("--refresh-list", action="store_true")
     parser.add_argument("--no-resume", action="store_true")
     parser.add_argument("--retry-failed", action="store_true")
+    parser.add_argument("--only-new", action="store_true")
     args = parser.parse_args()
     cmd = ["batch", "watch-later", "--limit", str(args.limit)]
     if args.with_summary:
@@ -23,6 +24,8 @@ def main():
         cmd.append("--no-resume")
     if args.retry_failed:
         cmd.append("--retry-failed")
+    if args.only_new:
+        cmd.append("--only-new")
     raise SystemExit(bilisub_main(cmd))
 
 if __name__ == "__main__":

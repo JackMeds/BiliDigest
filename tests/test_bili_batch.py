@@ -12,13 +12,14 @@ def test_get_watch_later_items_uses_fresh_cache(tmp_path, monkeypatch):
     items_path.write_text(json.dumps({"bvid": "BV1234567890", "title": "缓存视频"}) + "\n", encoding="utf-8")
     bili_batch.save_json(
         meta_path,
-        {
-            "count": 1,
-            "exhausted": False,
-            "fetched_at_epoch": 9_999_999_999,
-        },
-    )
-    monkeypatch.setattr(bili_batch, "watch_later", lambda client, limit: (_ for _ in ()).throw(AssertionError("network called")))
+            {
+                "count": 1,
+                "total": 3,
+                "exhausted": False,
+                "fetched_at_epoch": 9_999_999_999,
+            },
+        )
+    monkeypatch.setattr(bili_batch, "watch_later_with_total", lambda client, limit: (_ for _ in ()).throw(AssertionError("network called")))
 
     items, info = bili_batch.get_watch_later_items(object(), 1, cache_ttl=86_400)
 
@@ -36,6 +37,34 @@ def test_state_roundtrip(tmp_path, monkeypatch):
 
     assert path == tmp_path / "watch-later.json"
     assert loaded["completed"]["BV1234567890"]["title"] == "完成"
+
+
+def test_partial_list_does_not_overwrite_full_snapshot(tmp_path, monkeypatch):
+    monkeypatch.setattr(bili_batch, "CACHE_DIR", tmp_path / "cache")
+    monkeypatch.setattr(bili_batch, "SNAPSHOT_DIR", tmp_path / "snapshots")
+    snapshot_path = bili_batch.snapshot_path("watch-later")
+    bili_batch.save_json(
+        snapshot_path,
+        {
+            "items": [{"bvid": "BV0000000000", "title": "旧完整快照"}],
+            "total": 1,
+        },
+    )
+    monkeypatch.setattr(
+        bili_batch,
+        "watch_later_with_total",
+        lambda client, limit: {
+            "total": 559,
+            "items": [{"bvid": "BV1234567890", "title": "一条样例"}],
+        },
+    )
+
+    items, info = bili_batch.get_watch_later_items(object(), 1, refresh=True)
+    snapshot = json.loads(snapshot_path.read_text(encoding="utf-8"))
+
+    assert len(items) == 1
+    assert info["total"] == 559
+    assert snapshot["items"][0]["bvid"] == "BV0000000000"
 
 
 def test_batch_fallback_summary_records_summary_only(tmp_path, monkeypatch, capsys):
@@ -68,6 +97,7 @@ def test_batch_fallback_summary_records_summary_only(tmp_path, monkeypatch, caps
         refresh_list=False,
         resume=False,
         retry_failed=False,
+        only_new=False,
     )
 
     assert bilisub.cmd_batch(args) == 0

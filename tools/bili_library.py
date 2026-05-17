@@ -5,6 +5,13 @@ from typing import Any
 from .bili_client import BiliClient, BiliError, dated_output_dir
 
 
+def int_or_none(value: Any) -> int | None:
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
+
+
 def normalize_video(item: dict[str, Any], source: str) -> dict[str, Any]:
     return {
         "source": source,
@@ -19,38 +26,53 @@ def normalize_video(item: dict[str, Any], source: str) -> dict[str, Any]:
     }
 
 
-def watch_later(client: BiliClient, limit: int = 15) -> list[dict[str, Any]]:
+def watch_later_with_total(client: BiliClient, limit: int = 15) -> dict[str, Any]:
     videos: list[dict[str, Any]] = []
     page = 1
+    total: int | None = None
     while len(videos) < limit:
         body = client.request_json(
             "https://api.bilibili.com/x/v2/history/toview/web",
             {"ps": min(20, limit - len(videos)), "pn": page},
             auth_required=True,
         )
-        items = ((body.get("data") or {}).get("list") or [])
+        data = body.get("data") or {}
+        if total is None:
+            total = int_or_none(data.get("count") or data.get("total"))
+        items = (data.get("list") or [])
         if not items:
             break
         videos.extend(normalize_video(item, "watch-later") for item in items)
         if len(items) < 20:
             break
         page += 1
-    return videos[:limit]
+    return {"items": videos[:limit], "total": total}
 
 
-def favorite_folders(client: BiliClient, mid: str | int = "me") -> list[dict[str, Any]]:
+def watch_later(client: BiliClient, limit: int = 15) -> list[dict[str, Any]]:
+    return watch_later_with_total(client, limit)["items"]
+
+
+def favorite_folders_with_total(client: BiliClient, mid: str | int = "me") -> dict[str, Any]:
     up_mid = client.my_mid() if str(mid) == "me" else int(mid)
     body = client.request_json(
         "https://api.bilibili.com/x/v3/fav/folder/created/list-all",
         {"up_mid": up_mid},
         auth_required=True,
     )
-    return (body.get("data") or {}).get("list") or []
+    data = body.get("data") or {}
+    items = data.get("list") or []
+    return {"items": items, "total": int_or_none(data.get("count")) or len(items)}
 
 
-def favorite_items(client: BiliClient, media_id: int, limit: int = 15) -> list[dict[str, Any]]:
+def favorite_folders(client: BiliClient, mid: str | int = "me") -> list[dict[str, Any]]:
+    return favorite_folders_with_total(client, mid)["items"]
+
+
+def favorite_items_with_total(client: BiliClient, media_id: int, limit: int = 15) -> dict[str, Any]:
     videos: list[dict[str, Any]] = []
     page = 1
+    total: int | None = None
     while len(videos) < limit:
         body = client.request_json(
             "https://api.bilibili.com/x/v3/fav/resource/list",
@@ -63,6 +85,9 @@ def favorite_items(client: BiliClient, media_id: int, limit: int = 15) -> list[d
             auth_required=True,
         )
         data = body.get("data") or {}
+        if total is None:
+            info = data.get("info") or {}
+            total = int_or_none(info.get("media_count") or data.get("total") or data.get("count"))
         items = data.get("medias") or []
         if not items:
             break
@@ -70,7 +95,11 @@ def favorite_items(client: BiliClient, media_id: int, limit: int = 15) -> list[d
         if len(items) < 36:
             break
         page += 1
-    return videos[:limit]
+    return {"items": videos[:limit], "total": total}
+
+
+def favorite_items(client: BiliClient, media_id: int, limit: int = 15) -> list[dict[str, Any]]:
+    return favorite_items_with_total(client, media_id, limit)["items"]
 
 
 def write_jsonl(items: list[dict[str, Any]], name: str, out_dir: Path | None = None) -> Path:
