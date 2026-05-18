@@ -72,13 +72,15 @@ output/bilidigest/snapshots/watch-later.json
 output/bilidigest/state/watch-later.json
 ```
 
-List commands return the remote `total`, so agents can use `--limit 1` for fast size checks. Rerunning the same batch command resumes from the state file. Use `--refresh-list` when the user explicitly wants a fresh Watch Later list, `--retry-failed` when they want to retry previous failures, and `--no-resume` only when they want to ignore the old state.
+List commands return the remote `total`, so agents can use `--limit 1` for fast size checks. Rerunning the same batch command resumes from the state file. Completed videos and previously failed videos are skipped. Use `--refresh-list` when the user explicitly wants a fresh Watch Later list, and `--no-resume` only when they want to ignore the old state.
 
 For daily automation, refresh the list and process only newly added items:
 
 ```bash
 scripts/bilidigest batch watch-later --limit 600 --refresh-list --only-new --fallback-summary
 ```
+
+Do not use `--retry-failed` in daily automation or large background batches. It is only for manual investigation after a temporary outage; videos without subtitles or AI summaries should remain failed after one attempt.
 
 ## Chat Login Flow
 

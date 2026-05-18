@@ -12,7 +12,7 @@
 - 列出稍后再看、收藏夹目录、收藏夹内容。
 - 稍后再看列表会缓存到本地，避免 Agent 重启后反复拉取 500+ 条列表。
 - 列表命令会返回远端 `total`，即使用 `--limit 1` 也能快速知道稍后再看/收藏夹总数。
-- 批量任务带持久状态文件，支持断点续跑、跳过已完成、按需重试失败项。
+- 批量任务带持久状态文件，支持断点续跑、跳过已完成和失败项。
 - 优先使用 B站已有字幕，不默认跑 ASR。
 - 可导出 B站 AI 小助手总结。
 - 输出到 `output/bilidigest/<日期>/`。
@@ -98,7 +98,7 @@ output/bilidigest/snapshots/watch-later.json
 output/bilidigest/state/watch-later.json
 ```
 
-默认列表缓存有效期是 24 小时。每次刷新列表时会更新快照并记录 `added`、`removed`、`changed`，方便日更自动化判断新增和移除。日常自动化或 Hermes Agent 重启后，直接重复运行同一条 `batch` 命令即可续跑；已完成视频会跳过，之前失败的视频默认也会跳过，避免反复请求同一个视频。
+默认列表缓存有效期是 24 小时。每次刷新列表时会更新快照并记录 `added`、`removed`、`changed`，方便日更自动化判断新增和移除。日常自动化或 Hermes Agent 重启后，直接重复运行同一条 `batch` 命令即可续跑；已完成视频会跳过，之前失败的视频也会跳过，避免反复请求同一个视频。
 
 常用参数：
 
@@ -106,15 +106,14 @@ output/bilidigest/state/watch-later.json
 # 强制刷新稍后再看列表
 python -m tools.bilidigest batch watch-later --limit 600 --refresh-list
 
-# 重新尝试之前失败的视频
-python -m tools.bilidigest batch watch-later --limit 600 --retry-failed --fallback-summary
-
 # 每天自动化：刷新列表，但只处理本次快照新增的视频
 python -m tools.bilidigest batch watch-later --limit 600 --refresh-list --only-new --fallback-summary
 
 # 忽略旧状态，从当前列表重新处理
 python -m tools.bilidigest batch watch-later --limit 600 --no-resume
 ```
+
+`--retry-failed` 只适合人工排查某个短时间故障后手动使用，不要放进日常自动化或大批量后台任务。无字幕、无 AI 总结的视频失败一次就应保留失败状态。
 
 如果视频没有 B站现成字幕，`--fallback-summary` 会尝试导出 B站 AI 小助手总结，并把该条记录为 `summary_only`。遇到登录失效、HTTP `412`、B站 `-352` 等风控信号时，批处理会保存状态并停止。
 

@@ -261,7 +261,7 @@ def build_parser(prog: str = "bilidigest") -> argparse.ArgumentParser:
     batch.add_argument("--refresh-list", action="store_true", help="忽略稍后再看列表缓存并重新请求")
     batch.add_argument("--resume", dest="resume", action="store_true", default=True, help="从状态文件续跑，默认开启")
     batch.add_argument("--no-resume", dest="resume", action="store_false", help="忽略旧状态，从当前列表重新处理")
-    batch.add_argument("--retry-failed", action="store_true", help="重新处理状态文件里之前失败的视频")
+    batch.add_argument("--retry-failed", action="store_true", help="手动重新处理之前失败的视频；不要用于日常自动化")
     batch.add_argument("--only-new", action="store_true", help="只处理本次刷新列表快照中新增的视频，通常配合 --refresh-list")
     batch.set_defaults(func=cmd_batch)
 

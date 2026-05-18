@@ -14,7 +14,7 @@ License: GPL-3.0-or-later.
 - Lists Watch Later and Favorite folders/items.
 - Caches large Watch Later lists locally so agents do not refetch hundreds of items on every restart.
 - List commands return the remote `total`, so `--limit 1` can quickly report the Watch Later or Favorite size.
-- Writes a persistent batch state file for resume, skip-completed, and retry-failed workflows.
+- Writes a persistent batch state file for resume and skip-completed/failed workflows.
 - Exports existing Bilibili subtitles first, without running ASR by default.
 - Exports Bilibili AI Assistant summaries when available.
 - Writes Markdown, SRT, and JSON under `output/bilidigest/<date>/`.
@@ -100,7 +100,7 @@ output/bilidigest/snapshots/watch-later.json
 output/bilidigest/state/watch-later.json
 ```
 
-The default list cache TTL is 24 hours. Each refreshed list updates a snapshot and records `added`, `removed`, and `changed`, which lets daily automation detect new and removed items. For daily automation or after an agent restart, rerun the same `batch` command to resume. Completed videos are skipped, and previously failed videos are skipped unless explicitly retried.
+The default list cache TTL is 24 hours. Each refreshed list updates a snapshot and records `added`, `removed`, and `changed`, which lets daily automation detect new and removed items. For daily automation or after an agent restart, rerun the same `batch` command to resume. Completed videos and previously failed videos are skipped.
 
 Common options:
 
@@ -108,15 +108,14 @@ Common options:
 # Force-refresh the Watch Later list
 python -m tools.bilidigest batch watch-later --limit 600 --refresh-list
 
-# Retry videos that failed earlier
-python -m tools.bilidigest batch watch-later --limit 600 --retry-failed --fallback-summary
-
 # Daily automation: refresh the list but process only items newly added in this snapshot
 python -m tools.bilidigest batch watch-later --limit 600 --refresh-list --only-new --fallback-summary
 
 # Ignore the old state and process the current list again
 python -m tools.bilidigest batch watch-later --limit 600 --no-resume
 ```
+
+`--retry-failed` is only for manual investigation after a short-lived outage. Do not put it in daily automation or large background batches. Videos without subtitles or AI summaries should remain failed after one attempt.
 
 If a video has no existing Bilibili subtitle, `--fallback-summary` attempts to export the Bilibili AI Assistant summary and records the item as `summary_only`. Login-expired and risk-control responses such as HTTP `412` or Bilibili `-352` save state and stop the batch.
 
