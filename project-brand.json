@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "repo": "JackMeds/BiliDigest",
+  "wordmark": "BiliDigest",
+  "displayName": "BiliDigest / 哔哩摘要笔记",
+  "localName": "哔哩摘要笔记 / 从视频队列到个人知识",
+  "kind": "pipeline",
+  "category": "personal knowledge",
+  "accent": "#B83B69",
+  "accentDark": "#F199B6",
+  "tagline": {
+    "en": "A video queue, ready for your next idea.",
+    "zh": "将字幕与摘要整理成 Agent 可读的笔记。"
+  },
+  "tags": [
+    "subtitles",
+    "markdown",
+    "agent workflows"
+  ],
+  "readmes": [
+    "README.md",
+    "README_en.md"
+  ],
+  "links": {
+    "source": "https://github.com/JackMeds/BiliDigest"
+  },
+  "pilot": true,
+  "proof": "assets/brand/product-proof.png"
+}
