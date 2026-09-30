@@ -1,5 +1,18 @@
 # BiliDigest
 
+## Agent tools 0.4
+
+An installable `bili` JSON CLI and authenticated HTTP/OpenAPI API now share the same collection engine. MCP is not required. Collect UP uploads and all regular video parts, prefer independent audio and existing subtitles, optionally transcribe locally, resume persistent jobs and export knowledge artifacts.
+
+```sh
+python -m pip install '.[http]'
+bili doctor
+bili auth status
+```
+
+[Agent usage and HTTP integration](docs/agent-tools.md). `bilidigest agent ...` is equivalent to `bili ...`; legacy commands below remain compatible. Heavy transcription packages are optional via `.[legacy]`. A chat host still needs terminal or HTTP tool capabilities.
+
+
 Bilibili digest notes for agents.
 
 [中文说明](README.md)
@@ -17,7 +30,7 @@ License: GPL-3.0-or-later.
 - Writes a persistent batch state file for resume and skip-completed/failed workflows.
 - Exports existing Bilibili subtitles first, without running ASR by default.
 - Exports Bilibili AI Assistant summaries when available.
-- Writes Markdown, SRT, and JSON under `output/bilidigest/<date>/`.
+- Writes Markdown, SRT, and JSON under `~/Documents/BiliDigest/bilidigest/<date>/`.
 - Keeps Whisper/Qwen/OpenAI/Gemini transcription tools as explicit fallbacks.
 
 This is not a public API documentation project and not a third-party Bilibili client. It is a local-first tool for personal notes and agent workflows.
@@ -44,7 +57,22 @@ The preferred login cache is the macOS user data file:
 ~/Library/Application Support/BiliDigest/session.json
 ```
 
-`auth import-browser edge` imports your existing Microsoft Edge Bilibili cookies through `yt-dlp` and stores them in that shared session file. The QR login command remains available; it prints a compact terminal QR, a copyable login URL, and writes `output/login_qr.png`. Old BiliSubNotes and project-local `.user_session.json` files are only used as legacy fallbacks and are migrated into the shared session file when possible.
+`auth import-browser edge` imports your existing Microsoft Edge Bilibili cookies through `yt-dlp` and stores them in that shared session file. The QR login command remains available; it prints a compact terminal QR, a copyable login URL, and writes `~/Library/Caches/BiliDigest/login_qr.png`. Old BiliSubNotes and project-local `.user_session.json` files are only used as legacy fallbacks and are migrated into the shared session file when possible.
+
+## Runtime directories
+
+Default macOS directories are split by purpose:
+
+```text
+Auth/state: ~/Library/Application Support/BiliDigest/
+Disposable cache: ~/Library/Caches/BiliDigest/
+Logs: ~/Library/Logs/BiliDigest/
+Human-facing artifacts: ~/Documents/BiliDigest/
+```
+
+`BILIDIGEST_HOME` is still only used to locate the source checkout. To override runtime data locations, set `BILIDIGEST_DATA_DIR`, `BILIDIGEST_CACHE_DIR`, `BILIDIGEST_LOG_DIR`, or `BILIDIGEST_OUTPUT_DIR`.
+
+Cleanup boundary: `Caches` and `Logs` are disposable; `Application Support` contains the session and long-lived batch state; `Documents/BiliDigest` contains subtitles, summaries, reports, and static site artifacts intended for humans.
 
 For chat agents such as Hermes Agent, Telegram bots, or a TUI, use the non-blocking JSON login flow:
 
@@ -79,10 +107,10 @@ python -m tools.bilidigest list favorite --media-id 123456 --limit 15
 python -m tools.bilidigest transcript BVxxxxxxxxxx --format md
 python -m tools.bilidigest transcript "https://www.bilibili.com/video/BVxxxxxxxxxx" --format srt
 
-# Export Bilibili AI Assistant summary
+# Export the short Bilibili AI Assistant summary for reference/fallback only
 python -m tools.bilidigest summary BVxxxxxxxxxx
 
-# Batch Watch Later
+# Batch Watch Later; --with-summary writes a transcript-based .digest.md
 python -m tools.bilidigest batch watch-later --limit 15 --with-summary
 python -m tools.bilidigest batch watch-later --limit 600 --fallback-summary --with-summary
 ```
@@ -94,10 +122,10 @@ Legacy commands such as `python -m tools.auth --status`, `python -m tools.list -
 `batch watch-later` uses local cache and state files by default:
 
 ```text
-output/bilidigest/cache/watch-later.jsonl
-output/bilidigest/cache/watch-later.meta.json
-output/bilidigest/snapshots/watch-later.json
-output/bilidigest/state/watch-later.json
+~/Library/Caches/BiliDigest/bilidigest/cache/watch-later.jsonl
+~/Library/Caches/BiliDigest/bilidigest/cache/watch-later.meta.json
+~/Library/Caches/BiliDigest/bilidigest/snapshots/watch-later.json
+~/Library/Application Support/BiliDigest/state/watch-later.json
 ```
 
 The default list cache TTL is 24 hours. Each refreshed list updates a snapshot and records `added`, `removed`, and `changed`, which lets daily automation detect new and removed items. For daily automation or after an agent restart, rerun the same `batch` command to resume. Completed videos and previously failed videos are skipped.
@@ -108,8 +136,8 @@ Common options:
 # Force-refresh the Watch Later list
 python -m tools.bilidigest batch watch-later --limit 600 --refresh-list
 
-# Daily automation: refresh the list but process only items newly added in this snapshot
-python -m tools.bilidigest batch watch-later --limit 600 --refresh-list --only-new --fallback-summary
+# Daily automation: refresh the list, process newly added items, and write transcript digests
+python -m tools.bilidigest batch watch-later --limit 600 --refresh-list --only-new --fallback-summary --with-summary
 
 # Ignore the old state and process the current list again
 python -m tools.bilidigest batch watch-later --limit 600 --no-resume
@@ -117,7 +145,19 @@ python -m tools.bilidigest batch watch-later --limit 600 --no-resume
 
 `--retry-failed` is only for manual investigation after a short-lived outage. Do not put it in daily automation or large background batches. Videos without subtitles or AI summaries should remain failed after one attempt.
 
-If a video has no existing Bilibili subtitle, `--fallback-summary` attempts to export the Bilibili AI Assistant summary and records the item as `summary_only`. Login-expired and risk-control responses such as HTTP `412` or Bilibili `-352` save state and stop the batch.
+`--with-summary` reads the full Bilibili subtitle, applies common ASR/typo correction, and writes a `.digest.md` deep summary. The state `summary` field points to this digest so reports and Feishu publishing use the meaningful artifact. The short Bilibili AI Assistant summary is used only with explicit `--with-bili-summary` or no-subtitle `--fallback-summary`. If a video has no existing Bilibili subtitle, `--fallback-summary` attempts to export the Bilibili AI Assistant summary and records the item as `summary_only`. Login-expired and risk-control responses such as HTTP `412` or Bilibili `-352` save state and stop the batch.
+
+Transcript digests use an OpenAI-compatible API. By default the tool reads `DEEPSEEK_API_KEY` and uses `deepseek-chat`; override with `BILIDIGEST_LLM_API_KEY`, `BILIDIGEST_LLM_BASE_URL`, and `BILIDIGEST_LLM_MODEL`.
+
+### Legacy output migration
+
+The project-local `output/` directory is no longer the runtime data directory. To migrate older files, run:
+
+```bash
+python scripts/migrate_bilidigest_paths.py
+```
+
+The script copies old reports, site files, dated artifacts, and Feishu-ready files into `~/Documents/BiliDigest/legacy-output/`, old cache and snapshots into `~/Library/Caches/BiliDigest/`, and old state into `~/Library/Application Support/BiliDigest/state/`. After copy verification, the original `output/` is renamed to `output.migrated-YYYYMMDD-HHMMSS`; it is not deleted.
 
 ## Agent Skill
 
@@ -164,7 +204,7 @@ npx skills add . --skill bili-digest -g -a codex -y
 - For large batches, keep the default slow mode or use a modest setting such as `BILIDIGEST_DELAY_SECONDS=6 BILIDIGEST_DELAY_JITTER_SECONDS=2`; do not run multiple batch jobs concurrently.
 - The legacy video/audio downloader also uses one fragment at a time and passes slow `yt-dlp` sleep settings. Tune it with `BILIDIGEST_YTDLP_SLEEP_SECONDS` and `BILIDIGEST_YTDLP_MAX_SLEEP_SECONDS`.
 - Risk-control responses such as HTTP `412` or Bilibili `-352` stop batch processing.
-- Cookies, sessions, `.env`, and output files are ignored by Git.
+- Cookies, sessions, `.env`, and runtime artifacts are ignored by Git.
 - The tool only processes content your logged-in account can already access.
 
 ## Acknowledgements

@@ -1,117 +1,60 @@
 ---
 name: bili-digest
-description: Summarize and organize the user's own logged-in Bilibili Watch Later and Favorites lists for local agent notes.
-origin: BiliDigest
+description: Collect accessible Bilibili videos, UP uploads, favorites or Watch Later into audio, timestamped transcripts and knowledge-library artifacts using JSON CLI or authenticated HTTP.
+metadata:
+  origin: BiliDigest
 ---
 
-# BiliDigest
+# BiliDigest for agents
 
-Use this skill when the user asks to summarize, inspect, or take notes from Bilibili Watch Later, Favorites, or a specific Bilibili video.
+Use the installed `bili` JSON CLI when a terminal is available. For a remote service, use its authenticated OpenAPI API. MCP is not required. A Skill supplies instructions; the host still needs terminal execution or HTTP tools.
 
-This repository is GPL-3.0-or-later and includes attribution notes for BiliTools in `NOTICE`.
+## First use
 
-## Commands
+Run `bili doctor` and `bili auth status`. If the command is missing, install BiliDigest (`pip install '.[http]'` from its checkout or install its supplied wheel). A repository-local fallback is `scripts/bilidigest agent ...`; set `BILIDIGEST_HOME` only when the checkout cannot be found automatically.
 
-Prefer the bundled launcher next to this `SKILL.md` so the skill also works when installed outside the repository:
+Use `bili auth import-bilitools` for the user's existing local BiliTools session, or `bili auth login` then `bili auth poll KEY` for QR login. Never print or attach cookies, session files or HTTP tokens. Login/QR handling stays in the user's own account.
 
-```bash
-scripts/bilidigest auth status
-scripts/bilidigest auth import-browser edge
-scripts/bilidigest auth session-path --json
-scripts/bilidigest auth login --json --no-wait
-scripts/bilidigest auth poll <qrcode_key> --json
-scripts/bilidigest list watch-later --limit 15
-scripts/bilidigest list watch-later --limit 600 --no-items
-scripts/bilidigest transcript <BV-or-url> --format md
-scripts/bilidigest summary <BV-or-url>
-scripts/bilidigest batch watch-later --limit 600 --fallback-summary --with-summary
+## Collection workflow
+
+```sh
+bili discover 'https://space.bilibili.com/38291171' --limit 1000
+bili snapshot SNAPSHOT_ID --offset 0 --limit 100
+bili plan SNAPSHOT_ID --mode audio-preferred --asr whisper-cpp --language zh
+bili start PLAN_ID --key my-collection
+bili status JOB_ID
+bili export JOB_ID --include-media
 ```
 
-If the launcher cannot find the repository, set `BILIDIGEST_HOME` to the cloned BiliDigest path. When already inside the BiliDigest project root, these direct commands are equivalent:
+Use IDs returned in `data.id`, not these placeholders. Discovery supports video BV/AV/URLs, b23.tv, UP spaces, `mid:UID`, `fav:FID`, favorite URLs with fid, and `watch-later`. It returns a preview; paginate `snapshot` to review all items. Confirm `complete` before claiming full coverage. Increase the discovery limit when necessary; `--allow-partial` is only for an intentionally limited collection.
 
-```bash
-python -m tools.bilidigest auth status
-python -m tools.bilidigest auth import-browser edge
-python -m tools.bilidigest auth session-path --json
-python -m tools.bilidigest auth login
-python -m tools.bilidigest auth login --json --no-wait
-python -m tools.bilidigest auth poll <qrcode_key> --json
-python -m tools.bilidigest list watch-later --limit 15
-python -m tools.bilidigest list watch-later --limit 600 --no-items
-python -m tools.bilidigest list favorites --mid me
-python -m tools.bilidigest list favorite --media-id <id> --limit 15
-python -m tools.bilidigest transcript <BV-or-url> --format md
-python -m tools.bilidigest summary <BV-or-url>
-python -m tools.bilidigest batch watch-later --limit 15 --with-summary
-python -m tools.bilidigest batch watch-later --limit 600 --fallback-summary --with-summary
-```
+For topic filtering, inspect titles/descriptions and use repeated `--select BV` / `--exclude BV`. `--keyword` is literal matching, not semantic relevance. Ambiguous titles may need transcript review. The collector expands all regular video parts automatically.
 
-## Workflow
+Media policy follows the user: `audio-preferred` saves standalone audio when available, otherwise a combined video with audio; `audio` extracts audio if needed; `video` saves video with sound. Do not claim video frames or diagrams were analyzed by a transcript-only workflow.
 
-1. Check login status first.
-2. If login is missing and the user uses Microsoft Edge, prefer `auth import-browser edge` before QR login.
-3. For a list request, fetch at most 15 items unless the user explicitly asks for a smaller number.
-4. For a video, export Bilibili's existing subtitle first. Do not run ASR unless the subtitle export fails and the user asks for fallback transcription.
-5. Read the generated Markdown from `output/bilidigest/<date>/` and summarize or organize notes from that text.
-6. If Bilibili returns risk-control or login errors, stop and tell the user to re-login or retry later.
+Subtitles are preferred. Choose `--asr whisper-cpp` when the user's request authorizes fallback transcription; otherwise the default is `--asr none`. `bili configure --whisper-model /path/to/model.bin` selects an already downloaded local model. Do not silently download large models. `--summarize` explicitly invokes the configured LLM on full transcript chunks, requires the llm extra/API configuration, and may incur provider cost.
 
-## Batch Workflow
+## Long jobs and results
 
-For large Watch Later runs, prefer the resumable batch command:
+`start` returns a persistent job ID; `--foreground` waits. Inspect `state`, `counts`, per-part errors and output files. `ok:true` only means the tool call succeeded, not that all collection stages completed. Use `bili resume JOB_ID` after fixing a dependency/login problem; use `bili cancel JOB_ID` to stop while preserving work. Do not restart by creating a fresh job unless a new collection is intended.
 
-```bash
-scripts/bilidigest batch watch-later --limit 600 --fallback-summary --with-summary
-```
+A `complete` ASR-disabled job can legitimately lack transcripts; report those gaps. `partial` has failed stages, `blocked` needs login/risk-control handling. On platform risk-control errors stop requests and let the user resolve the challenge or retry later. Do not repeatedly retry blocked resources.
 
-The command stores local cache and state here:
+Read the generated `README.md` and manifest, then use per-part Markdown/SRT/JSON, `transcripts.md`, `catalog.csv` or `knowledge.jsonl`. Exact duplicate audio can reuse ASR, but each source remains identified. Never label title-based or sampled-text notes as full-transcript summaries. Keep automatic transcription uncertainties visible.
 
-```text
-output/bilidigest/cache/watch-later.jsonl
-output/bilidigest/cache/watch-later.meta.json
-output/bilidigest/snapshots/watch-later.json
-output/bilidigest/state/watch-later.json
-```
+## HTTP-only hosts
 
-List commands return the remote `total`, so agents can use `--limit 1` for fast size checks. Rerunning the same batch command resumes from the state file. Completed videos and previously failed videos are skipped. Use `--refresh-list` when the user explicitly wants a fresh Watch Later list, and `--no-resume` only when they want to ignore the old state.
+A trusted deployment runs `bili serve`. Use Bearer authentication and fetch `/openapi.json`; it declares operations and inputs. Common sequence:
 
-For daily automation, refresh the list and process only newly added items:
+1. `POST /v1/discover` with `source` and `limit`.
+2. `GET /v1/snapshots/{id}` with offset/limit.
+3. `POST /v1/plans` with snapshot_id, select/exclude, mode, asr and language.
+4. `POST /v1/jobs` with plan_id and idempotency_key.
+5. `GET /v1/jobs/{id}` until a terminal state or required action.
+6. `POST /v1/jobs/{id}/export`, then authenticated artifact download.
 
-```bash
-scripts/bilidigest batch watch-later --limit 600 --refresh-list --only-new --fallback-summary
-```
+The endpoint must be reachable from the calling host. Local file paths are not cloud uploads; fetch the artifact through the API when transferring to a remote agent. The server never returns login cookies. The standalone `agent_http_client.py` uses only Python's standard library.
 
-Do not use `--retry-failed` in daily automation or large background batches. It is only for manual investigation after a temporary outage; videos without subtitles or AI summaries should remain failed after one attempt.
+## Existing daily digest users
 
-## Chat Login Flow
-
-For chat surfaces such as Hermes Agent, Telegram, or a TUI, do not block forever inside an interactive login command. Run:
-
-```bash
-python -m tools.bilidigest auth login --json --no-wait
-```
-
-Send the returned `login_url` or `qr_image` to the user. Then poll with:
-
-```bash
-python -m tools.bilidigest auth poll <qrcode_key> --json
-```
-
-Treat `logged_in` as success, `expired` as a request to regenerate the QR code, `scanned` as waiting for phone confirmation, and `pending` as still waiting for the scan.
-
-## Session Storage
-
-The shared macOS session path is:
-
-```text
-~/Library/Application Support/BiliDigest/session.json
-```
-
-Do not store session files inside individual Skill directories. Use `auth session-path --json` to confirm where the CLI is reading from.
-
-## Safety
-
-Only process videos the user's own account can already access. Do not expose, print, or copy `.user_session.json`, cookies, API keys, or `.env` values into chat.
-
-The CLI intentionally waits about 8-12 seconds between API requests. Do not override the delay for routine daily automation unless the user explicitly asks. The legacy yt-dlp downloader also runs with slow sleeps and one concurrent fragment by default.
-
-For one-off large local batches, a modest override such as `BILIDIGEST_DELAY_SECONDS=6 BILIDIGEST_DELAY_JITTER_SECONDS=2` is acceptable when the user explicitly asks to process hundreds of videos. Do not start multiple BiliDigest batch jobs at the same time.
+For the earlier watch-later daily automation and its compatibility CLI, read [legacy.md](references/legacy.md). Those commands remain available; do not replace existing schedules just because the new collector exists.

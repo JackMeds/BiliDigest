@@ -6,15 +6,22 @@ from pathlib import Path
 
 import qrcode
 import requests
-from yt_dlp.cookies import extract_cookies_from_browser
 
-from .bili_client import BiliClient, LoginRequired, OUTPUT_DIR, SESSION_FILE, OLD_APP_SESSION_FILE, LEGACY_SESSION_FILE, load_cookies, save_cookies
+from . import bili_paths
+from .bili_client import BiliClient, LoginRequired, SESSION_FILE, OLD_APP_SESSION_FILE, LEGACY_SESSION_FILE, load_cookies, save_cookies
 
 
 QR_API_URL = "https://passport.bilibili.com/x/passport-login/web/qrcode/generate"
 QR_POLL_URL = "https://passport.bilibili.com/x/passport-login/web/qrcode/poll"
 BILIBILI_COOKIE_NAMES = {"SESSDATA", "bili_jct", "DedeUserID", "DedeUserID__ckMd5", "sid", "buvid3", "buvid4", "b_nut", "_uuid", "bili_ticket", "refresh_token"}
 LOGIN_POLL_INTERVAL_SECONDS = float(os.environ.get("BILIDIGEST_LOGIN_POLL_INTERVAL_SECONDS", os.environ.get("BILISUB_LOGIN_POLL_INTERVAL_SECONDS", "5")))
+OUTPUT_DIR = bili_paths.CACHE_DIR
+
+
+def extract_cookies_from_browser(*args, **kwargs):
+    # Optional dependency; QR login and agent tools need not install yt-dlp.
+    from yt_dlp.cookies import extract_cookies_from_browser as extract
+    return extract(*args, **kwargs)
 
 
 class QuietCookieLogger:
@@ -95,7 +102,7 @@ def _print_qr_ascii(qr: qrcode.QRCode) -> None:
     print(border_line)
 
 
-def create_login_request() -> dict[str, object]:
+def create_login_request(output_dir=None) -> dict[str, object]:
     resp = requests.get(QR_API_URL, headers=BiliClient(delay=0).session.headers, timeout=15)
     resp.raise_for_status()
     data = resp.json()["data"]
@@ -106,9 +113,10 @@ def create_login_request() -> dict[str, object]:
     qr.add_data(qrcode_url)
     qr.make(fit=True)
 
-    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-    img_path = OUTPUT_DIR / "login_qr.png"
-    qr.make_image(fill_color="black", back_color="white").save(img_path)
+    target_dir = Path(output_dir) if output_dir else OUTPUT_DIR
+    target_dir.mkdir(parents=True, exist_ok=True)
+    img_path = target_dir / "login_qr.png"
+    qr.make_image(fill_color="black", back_color="white").save(str(img_path))
 
     return {
         "status": "login_required",
@@ -121,7 +129,7 @@ def create_login_request() -> dict[str, object]:
     }
 
 
-def poll_once(qrcode_key: str) -> dict[str, object]:
+def poll_once(qrcode_key: str, session_path=None) -> dict[str, object]:
     poll = requests.get(
         QR_POLL_URL,
         params={"qrcode_key": qrcode_key},
@@ -137,8 +145,9 @@ def poll_once(qrcode_key: str) -> dict[str, object]:
         if result.get("url") and "refresh_token=" in result["url"]:
             refresh = result["url"].split("refresh_token=", 1)[1].split("&", 1)[0]
             cookies["refresh_token"] = refresh
-        save_cookies(cookies)
-        return {"status": "logged_in", "code": code, "message": f"登录成功，Session 已保存到 {SESSION_FILE}", "session_path": str(SESSION_FILE)}
+        save_cookies(cookies, session_path) if session_path else save_cookies(cookies)
+        destination = session_path or SESSION_FILE
+        return {"status": "logged_in", "code": code, "message": f"登录成功，Session 已保存到 {destination}", "session_path": str(destination)}
     if code == 86038:
         return {"status": "expired", "code": code, "message": "二维码已失效"}
     if code == 86090:

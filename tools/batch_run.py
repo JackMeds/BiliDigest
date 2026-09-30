@@ -7,6 +7,7 @@ def main():
     parser = argparse.ArgumentParser(description="兼容入口：批量导出稍后再看字幕")
     parser.add_argument("--limit", type=int, default=15)
     parser.add_argument("--with-summary", action="store_true")
+    parser.add_argument("--with-bili-summary", action="store_true")
     parser.add_argument("--fallback-summary", action="store_true")
     parser.add_argument("--refresh-list", action="store_true")
     parser.add_argument("--no-resume", action="store_true")
@@ -16,6 +17,8 @@ def main():
     cmd = ["batch", "watch-later", "--limit", str(args.limit)]
     if args.with_summary:
         cmd.append("--with-summary")
+    if args.with_bili_summary:
+        cmd.append("--with-bili-summary")
     if args.fallback_summary:
         cmd.append("--fallback-summary")
     if args.refresh_list:

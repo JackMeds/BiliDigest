@@ -26,3 +26,8 @@ downloads/
 .vscode/
 .idea/
 .DS_Store
+
+# Python distribution artifacts
+build/
+dist/
+*.egg-info/

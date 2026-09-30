@@ -3,13 +3,14 @@ import time
 from pathlib import Path
 from typing import Any, Callable
 
-from .bili_client import BiliClient, OUTPUT_DIR
+from . import bili_paths
+from .bili_client import BiliClient
 from .bili_library import watch_later_with_total, write_jsonl
 
 
-CACHE_DIR = OUTPUT_DIR / "bilidigest" / "cache"
-STATE_DIR = OUTPUT_DIR / "bilidigest" / "state"
-SNAPSHOT_DIR = OUTPUT_DIR / "bilidigest" / "snapshots"
+CACHE_DIR = bili_paths.batch_cache_dir()
+STATE_DIR = bili_paths.batch_state_dir()
+SNAPSHOT_DIR = bili_paths.batch_snapshot_dir()
 DEFAULT_CACHE_TTL_SECONDS = 24 * 60 * 60
 
 

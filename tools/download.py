@@ -6,7 +6,7 @@ import sys
 import argparse
 import subprocess
 import os
-from pathlib import Path
+from . import bili_paths
 from .utils import check_environment, get_output_dir
 from .bili_client import SESSION_FILE, load_cookies
 
@@ -17,8 +17,8 @@ YTDLP_MAX_SLEEP_SECONDS = os.environ.get("BILIDIGEST_YTDLP_MAX_SLEEP_SECONDS", o
 def create_temp_cookie_file(cookies):
     """将 JSON Session 转为 Netscape 格式供 yt-dlp 使用"""
     try:
-        temp_path = Path("output/.temp_cookies.txt")
-        temp_path.parent.mkdir(exist_ok=True)
+        temp_path = bili_paths.CACHE_DIR / ".temp_cookies.txt"
+        temp_path.parent.mkdir(parents=True, exist_ok=True)
         with open(temp_path, 'w') as f:
             f.write("# Netscape HTTP Cookie File\n")
             for k, v in cookies.items():
