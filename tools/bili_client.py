@@ -1,7 +1,6 @@
 import hashlib
 import json
 import os
-import platform
 import random
 import re
 import time
@@ -11,10 +10,11 @@ from urllib.parse import urlencode
 
 import requests
 
+from . import bili_paths
 
-ROOT_DIR = Path(__file__).parent.parent.resolve()
-LEGACY_SESSION_FILE = ROOT_DIR / ".user_session.json"
-OUTPUT_DIR = ROOT_DIR / "output"
+ROOT_DIR = bili_paths.ROOT_DIR
+LEGACY_SESSION_FILE = bili_paths.LEGACY_SESSION_FILE
+OUTPUT_DIR = bili_paths.OUTPUT_DIR
 DEFAULT_DELAY_SECONDS = float(os.environ.get("BILIDIGEST_DELAY_SECONDS", os.environ.get("BILISUB_DELAY_SECONDS", "8.0")))
 DEFAULT_DELAY_JITTER_SECONDS = float(os.environ.get("BILIDIGEST_DELAY_JITTER_SECONDS", os.environ.get("BILISUB_DELAY_JITTER_SECONDS", "4.0")))
 USER_AGENT = (
@@ -24,21 +24,15 @@ USER_AGENT = (
 
 
 def user_data_dir() -> Path:
-    if platform.system() == "Darwin":
-        return Path.home() / "Library" / "Application Support" / "BiliDigest"
-    root = os.environ.get("XDG_DATA_HOME")
-    return Path(root).expanduser() / "bilidigest" if root else Path.home() / ".local" / "share" / "bilidigest"
+    return bili_paths.DATA_DIR
 
 
 def old_user_data_dir() -> Path:
-    if platform.system() == "Darwin":
-        return Path.home() / "Library" / "Application Support" / "BiliSubNotes"
-    root = os.environ.get("XDG_DATA_HOME")
-    return Path(root).expanduser() / "bilisubnotes" if root else Path.home() / ".local" / "share" / "bilisubnotes"
+    return bili_paths.OLD_DATA_DIR
 
 
-SESSION_FILE = user_data_dir() / "session.json"
-OLD_APP_SESSION_FILE = old_user_data_dir() / "session.json"
+SESSION_FILE = bili_paths.SESSION_FILE
+OLD_APP_SESSION_FILE = bili_paths.OLD_APP_SESSION_FILE
 
 
 class BiliError(RuntimeError):
@@ -98,9 +92,7 @@ def sanitize_filename(value: str, max_len: int = 90) -> str:
 
 
 def dated_output_dir() -> Path:
-    out_dir = OUTPUT_DIR / "bilidigest" / time.strftime("%Y-%m-%d")
-    out_dir.mkdir(parents=True, exist_ok=True)
-    return out_dir
+    return bili_paths.dated_output_dir()
 
 
 class BiliClient:
@@ -145,8 +137,8 @@ class BiliClient:
         self.throttle()
         signed_params = self.sign_wbi(params or {}) if wbi else (params or {})
         resp = self.session.get(url, params=signed_params, timeout=timeout)
-        if resp.status_code == 412:
-            raise RiskControl("HTTP 412 Precondition Failed: request paused for account safety")
+        if resp.status_code in {412, 429}:
+            raise RiskControl(f"HTTP {resp.status_code}: requests paused for account safety")
         resp.raise_for_status()
         body = resp.json()
         code = body.get("code", 0)

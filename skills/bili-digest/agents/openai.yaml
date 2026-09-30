@@ -1,3 +1,6 @@
-name: bili-digest
-description: Summarize Bilibili Watch Later and Favorites into local Markdown for agent notes.
-entrypoint: SKILL.md
+interface:
+  display_name: "BiliDigest"
+  short_description: "Collect Bilibili audio and transcripts through CLI or HTTP."
+  default_prompt: "Use $bili-digest to collect the requested Bilibili resources and produce a traceable knowledge library."
+policy:
+  allow_implicit_invocation: true

@@ -12,6 +12,11 @@ from .bili_library import (
     watch_later_with_total,
     write_jsonl,
 )
+
+def export_transcript_digest(*args, **kwargs):
+    # Ordinary auth/list/subtitle commands should not import optional LLM dependencies.
+    from .bili_digest import export_transcript_digest as implementation
+    return implementation(*args, **kwargs)
 from .bili_subtitle import export_transcript
 from .bili_summary import export_summary
 
@@ -143,24 +148,44 @@ def cmd_batch(args: argparse.Namespace) -> int:
             continue
 
         print(f"[{index}/{len(items)}] 处理 {bvid} {title}", file=sys.stderr, flush=True)
+        transcript = None
         try:
             transcript = export_transcript(client, bvid, "md", out_dir=out_dir)
-            summary = None
+            digest = None
+            bili_summary = None
             if args.with_summary:
+                digest = export_transcript_digest(transcript, out_dir=out_dir)
+            if args.with_bili_summary:
                 try:
-                    summary = export_summary(client, bvid, out_dir=out_dir)
+                    bili_summary = export_summary(client, bvid, out_dir=out_dir)
                 except BiliError as exc:
-                    summary = {"error": str(exc), "code": exc.code}
+                    bili_summary = {"error": str(exc), "code": exc.code}
             completed[bvid] = {
                 "bvid": bvid,
                 "title": title,
-                "status": "transcript",
+                "status": "digest" if digest and not digest.get("error") else "transcript",
                 "transcript": transcript,
-                "summary": summary,
+                "digest": digest,
+                "summary": digest,
+                "bili_summary": bili_summary,
                 "updated_at": time.strftime("%Y-%m-%dT%H:%M:%S"),
             }
             failed.pop(bvid, None)
         except BiliError as exc:
+            if transcript is not None:
+                failed[bvid] = {
+                    "bvid": bvid,
+                    "title": title,
+                    "status": "digest_failed",
+                    "transcript": transcript,
+                    "error": str(exc),
+                    "code": exc.code,
+                    "updated_at": time.strftime("%Y-%m-%dT%H:%M:%S"),
+                }
+                completed.pop(bvid, None)
+                state["last_error"] = failed[bvid]
+                save_state("watch-later", state)
+                continue
             summary = None
             if (args.fallback_summary or args.with_summary) and not exc.stop_batch:
                 try:
@@ -255,7 +280,8 @@ def build_parser(prog: str = "bilidigest") -> argparse.ArgumentParser:
     batch = sub.add_parser("batch", help="批量处理稍后再看")
     batch.add_argument("kind", choices=["watch-later"])
     batch.add_argument("--limit", type=int, default=DEFAULT_LIMIT)
-    batch.add_argument("--with-summary", action="store_true")
+    batch.add_argument("--with-summary", action="store_true", help="基于完整字幕生成深度摘要和字幕纠错 digest")
+    batch.add_argument("--with-bili-summary", action="store_true", help="额外导出 B站 AI 小助手短总结")
     batch.add_argument("--fallback-summary", action="store_true", help="无字幕或字幕导出失败时尝试导出 B站 AI 总结")
     batch.add_argument("--cache-ttl", type=int, default=DEFAULT_CACHE_TTL_SECONDS, help="稍后再看列表缓存秒数，默认 86400")
     batch.add_argument("--refresh-list", action="store_true", help="忽略稍后再看列表缓存并重新请求")

@@ -4,7 +4,16 @@ set -euo pipefail
 if [[ -n "${BILIDIGEST_HOME:-}" ]]; then
   repo_root="$BILIDIGEST_HOME"
 else
-  repo_root="/Users/a15300/code/02-lab/BiliDigest"
+  script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+  candidate="$(cd -- "$script_dir/../../.." && pwd)"
+  if [[ -f "$candidate/tools/bilidigest.py" ]]; then
+    repo_root="$candidate"
+  elif command -v bilidigest >/dev/null 2>&1; then
+    exec bilidigest "$@"
+  else
+    echo 'Install BiliDigest first, or set BILIDIGEST_HOME to its repository.' >&2
+    exit 1
+  fi
 fi
 
 if [[ ! -d "$repo_root" ]]; then

@@ -92,6 +92,7 @@ def test_batch_fallback_summary_records_summary_only(tmp_path, monkeypatch, caps
         kind="watch-later",
         limit=1,
         with_summary=False,
+        with_bili_summary=False,
         fallback_summary=True,
         cache_ttl=86_400,
         refresh_list=False,
@@ -106,3 +107,105 @@ def test_batch_fallback_summary_records_summary_only(tmp_path, monkeypatch, caps
 
     assert output["completed"] == 1
     assert state["completed"]["BV1234567890"]["status"] == "summary_only"
+
+
+def test_batch_with_summary_generates_transcript_digest(tmp_path, monkeypatch, capsys):
+    monkeypatch.setattr(bili_batch, "STATE_DIR", tmp_path / "state")
+    monkeypatch.setattr(bilisub, "dated_output_dir", lambda: tmp_path / "out")
+    monkeypatch.setattr(
+        bilisub,
+        "get_watch_later_items",
+        lambda client, limit, cache_ttl, refresh, progress: (
+            [{"bvid": "BV1234567890", "title": "字幕视频"}],
+            {"source": "cache"},
+        ),
+    )
+    monkeypatch.setattr(
+        bilisub,
+        "export_transcript",
+        lambda client, bvid, fmt, out_dir: {
+            "paths": {"json": str(out_dir / "video.subtitle.json"), "md": str(out_dir / "video.md")},
+            "video": {"bvid": bvid, "title": "字幕视频"},
+        },
+    )
+    monkeypatch.setattr(
+        bilisub,
+        "export_transcript_digest",
+        lambda transcript, out_dir: {"path": str(out_dir / "video.digest.md"), "source": transcript["paths"]["json"]},
+    )
+    monkeypatch.setattr(
+        bilisub,
+        "export_summary",
+        lambda client, bvid, out_dir: (_ for _ in ()).throw(AssertionError("B站短总结不应作为字幕摘要调用")),
+    )
+    args = SimpleNamespace(
+        kind="watch-later",
+        limit=1,
+        with_summary=True,
+        with_bili_summary=False,
+        fallback_summary=True,
+        cache_ttl=86_400,
+        refresh_list=False,
+        resume=False,
+        retry_failed=False,
+        only_new=False,
+    )
+
+    assert bilisub.cmd_batch(args) == 0
+    output = json.loads(capsys.readouterr().out)
+    state = json.loads((tmp_path / "state" / "watch-later.json").read_text(encoding="utf-8"))
+    entry = state["completed"]["BV1234567890"]
+
+    assert output["completed"] == 1
+    assert entry["status"] == "digest"
+    assert entry["digest"]["path"].endswith("video.digest.md")
+    assert entry["summary"] == entry["digest"]
+    assert entry["bili_summary"] is None
+
+
+def test_batch_marks_digest_failure_as_failed_not_completed(tmp_path, monkeypatch, capsys):
+    monkeypatch.setattr(bili_batch, "STATE_DIR", tmp_path / "state")
+    monkeypatch.setattr(bilisub, "dated_output_dir", lambda: tmp_path / "out")
+    monkeypatch.setattr(
+        bilisub,
+        "get_watch_later_items",
+        lambda client, limit, cache_ttl, refresh, progress: (
+            [{"bvid": "BV1234567890", "title": "摘要失败视频"}],
+            {"source": "cache"},
+        ),
+    )
+    monkeypatch.setattr(
+        bilisub,
+        "export_transcript",
+        lambda client, bvid, fmt, out_dir: {
+            "paths": {"json": str(out_dir / "video.subtitle.json"), "md": str(out_dir / "video.md")},
+            "video": {"bvid": bvid, "title": "摘要失败视频"},
+        },
+    )
+    monkeypatch.setattr(
+        bilisub,
+        "export_transcript_digest",
+        lambda transcript, out_dir: (_ for _ in ()).throw(BiliError("LLM key missing")),
+    )
+    args = SimpleNamespace(
+        kind="watch-later",
+        limit=1,
+        with_summary=True,
+        with_bili_summary=False,
+        fallback_summary=True,
+        cache_ttl=86_400,
+        refresh_list=False,
+        resume=False,
+        retry_failed=False,
+        only_new=False,
+    )
+
+    assert bilisub.cmd_batch(args) == 0
+    output = json.loads(capsys.readouterr().out)
+    state = json.loads((tmp_path / "state" / "watch-later.json").read_text(encoding="utf-8"))
+
+    assert output["completed"] == 0
+    assert output["failed"] == 1
+    assert "BV1234567890" not in state["completed"]
+    assert state["failed"]["BV1234567890"]["status"] == "digest_failed"
+    assert state["failed"]["BV1234567890"]["transcript"]["paths"]["md"].endswith("video.md")

@@ -1,8 +1,8 @@
 import shutil
 import sys
-import subprocess
 import importlib.util
-from pathlib import Path
+
+from . import bili_paths
 
 def check_command(command, install_hint):
     """检查系统命令是否存在"""
@@ -52,8 +52,7 @@ def check_environment(tool_name):
     print("✅ 环境检查通过")
 
 def get_output_dir():
-    """获取输出目录"""
-    root_dir = Path(__file__).parent.parent
-    output_dir = root_dir / "output"
-    output_dir.mkdir(exist_ok=True)
+    """获取旧下载工具的缓存目录"""
+    output_dir = bili_paths.CACHE_DIR / "downloads"
+    output_dir.mkdir(parents=True, exist_ok=True)
     return output_dir
