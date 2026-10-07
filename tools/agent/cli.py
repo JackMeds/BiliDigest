@@ -18,8 +18,10 @@ def parser():
     p.add_argument("--output-dir", help="Override collection output directory")
     sub = p.add_subparsers(dest="command", required=True, parser_class=Parser)
     sub.add_parser("doctor", help="Inspect dependencies and local configuration")
-    config = sub.add_parser("configure", help="Select an existing local Whisper model")
-    config.add_argument("--whisper-model", required=True)
+    config = sub.add_parser("configure", help="Select an existing local ASR model and default backend")
+    config.add_argument("--whisper-model", help="Legacy whisper.cpp GGML model")
+    config.add_argument("--asr-backend", choices=["qwen3-asr", "whisper-cpp", "none"])
+    config.add_argument("--asr-model", help="Local model directory (Qwen) or GGML file (Whisper)")
     a = sub.add_parser("auth", help="Login without exposing cookies")
     a.add_argument("action", choices=["status", "import-bilitools", "login", "poll"])
     a.add_argument("value", nargs="?", help="BiliTools database path or QR polling key")
@@ -36,7 +38,7 @@ def parser():
     p2.add_argument("--exclude", action="append", default=[], metavar="BV")
     p2.add_argument("--keyword", action="append", default=[])
     p2.add_argument("--mode", choices=["audio-preferred", "audio", "video"], default="audio-preferred")
-    p2.add_argument("--asr", choices=["none", "whisper-cpp"], default="none")
+    p2.add_argument("--asr", choices=["none", "whisper-cpp", "qwen3-asr"], default=None)
     p2.add_argument("--language", default="auto")
     p2.add_argument("--summarize", action="store_true")
     p2.add_argument("--allow-partial", action="store_true")
@@ -72,7 +74,7 @@ def dispatch(args):
     if c == "doctor":
         return service.doctor()
     if c == "configure":
-        return service.configure(args.whisper_model)
+        return service.configure(args.whisper_model, asr_backend=args.asr_backend, asr_model=args.asr_model)
     if c == "auth":
         return service.auth(args.action, args.value)
     if c == "discover":

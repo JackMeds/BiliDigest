@@ -32,7 +32,7 @@ class PlanBody(Body):
     exclude: list[str] | None = None
     keywords: list[str] | None = None
     mode: str = "audio-preferred"
-    asr: str = "none"
+    asr: str | None = None
     language: str = "auto"
     summarize: bool = False
     allow_partial: bool = False

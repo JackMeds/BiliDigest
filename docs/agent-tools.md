@@ -1,6 +1,6 @@
 # BiliDigest Agent 工具
 
-0.4 版提供同一个处理核心的两种入口：**JSON CLI** 和 **带 Bearer 认证的 HTTP API**。Skill 说明如何调用。无需 MCP，也不要求调用者使用某一种模型。
+0.4.1 版提供同一个处理核心的两种入口：**JSON CLI** 和 **带 Bearer 认证的 HTTP API**。Skill 说明如何调用。无需 MCP，也不要求调用者使用某一种模型。
 
 有终端工具的 Codex、Hermes、Grok Bot 等宿主可以直接使用 CLI；能配置 HTTP 自定义工具的宿主可以使用 OpenAPI。纯聊天界面如果既不能执行命令也不能发工具请求，就必须先由宿主接入一种能力。安装本项目不会自动获得 Dot 或 Grok Bot 的调用权限。
 
@@ -13,13 +13,23 @@ python -m pip install '.[http]'
 bili doctor
 ```
 
-安装系统的 FFmpeg（含 ffprobe）。无字幕时希望本机转写，再安装 whisper.cpp，准备多语言 GGML 模型并配置：
+安装系统的 FFmpeg（含 ffprobe）。Apple Silicon 的本地转写支持 **Qwen3-ASR 0.6B MLX 8-bit**：
 
 ```sh
-bili configure --whisper-model /absolute/path/ggml-large-v3-turbo-q5_0.bin
+python -m pip install '.[http,qwen]'
+bili configure --asr-backend qwen3-asr --asr-model /absolute/path/Qwen3-ASR-0.6B-8bit
+bili doctor
 ```
 
-模型不随程序打包，也不会静默下载。`BILIDIGEST_WHISPER_MODEL` 可覆盖保存的配置。额外安装 `.[llm]` 开启完整文本摘要；安装 `.[browser]` 开启旧浏览器登录导入。默认安装不需要 PyTorch。旧转写模型可以通过 `.[legacy]` 安装。
+使用 `mlx-community/Qwen3-ASR-0.6B-8bit` 的 safetensors、JSON、词表文件，不能混用其他实现的权重布局。适配器校验0.6B结构与8-bit配置，使用PyPI `mlx-audio==0.5.8`，只读取本地权重；tokenizer明确关闭远程代码、离线加载。模型不随程序打包，也不会在转写时静默下载。`BILIDIGEST_QWEN_MODEL` 可覆盖路径。
+
+配置后，新的计划省略 `--asr` 就使用该后端；全新未配置环境仍默认 `none`。显式 `--asr none` 可关闭转写。已有任务保留原计划，不会因默认配置改变而自动更换后端。
+
+Qwen按20秒音频块处理并缓存已完成分段；中断后 `resume` 可复用已完成分段。时间戳是**音频分段边界**，不是逐句/逐字强制对齐，Markdown和JSON明确注明。缓存身份包含音频、模型文件内容、语言、运行库版本及适配器参数。保留字幕优先策略；普通字幕可用时不调用ASR。转写不执行付费摘要调用。
+
+旧 `--asr whisper-cpp` 和 `configure --whisper-model FILE` 仅保留兼容已有部署。切换配置到Qwen会移除当前 `whisper_model` 设置，但不会删除模型文件或历史产物；文件清理由用户单独授权。Qwen使用的log-mel特征提取类名称含Whisper，不代表仍在使用Whisper转写模型。
+
+额外安装 `.[llm]` 开启全文摘要，`.[browser]` 开启旧浏览器登录导入。Qwen extra不要求PyTorch。旧转写依赖可用 `.[legacy]` 安装。
 
 `bili` 是新命令，`bilidigest agent ...` 与它等价。旧 `bilidigest auth/list/transcript/summary/batch` 保留。
 
@@ -34,7 +44,7 @@ bili auth poll QRCODE_KEY
 
 bili discover 'https://space.bilibili.com/38291171' --limit 1000
 bili snapshot SNAPSHOT_ID --offset 0 --limit 100
-bili plan SNAPSHOT_ID --mode audio-preferred --asr whisper-cpp --language zh
+bili plan SNAPSHOT_ID --mode audio-preferred --asr qwen3-asr --language zh
 bili start PLAN_ID --key my-collection-2026-09-30
 bili status JOB_ID
 bili export JOB_ID --include-media
@@ -55,7 +65,8 @@ ID 来自前一条命令返回的 `data.id`。所有操作默认返回 JSON：`{
 | `--mode audio-preferred` | 有独立音轨时只下音轨，否则保存完整带音轨视频 |
 | `--mode audio` | 只保留音频；必要时从完整媒体提取音频 |
 | `--mode video` | 保存视频与音轨合并结果 |
-| `--asr none` | 默认；没字幕时保留媒体，并注明没有文字稿 |
+| `--asr none` | 关闭转写；未配置后端时为默认值，没字幕时注明没有文字稿 |
+| `--asr qwen3-asr` | 优先现成字幕，无字幕才用本地Qwen0.6B8-bit转写 |
 | `--asr whisper-cpp` | 优先现成字幕，无字幕才本地转写 |
 | `--summarize` | 按完整文本分块生成摘要；需要llm依赖与API配置，可能产生模型费用 |
 

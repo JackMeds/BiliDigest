@@ -20,7 +20,7 @@ Use `bili auth import-bilitools` for the user's existing local BiliTools session
 ```sh
 bili discover 'https://space.bilibili.com/38291171' --limit 1000
 bili snapshot SNAPSHOT_ID --offset 0 --limit 100
-bili plan SNAPSHOT_ID --mode audio-preferred --asr whisper-cpp --language zh
+bili plan SNAPSHOT_ID --mode audio-preferred --asr qwen3-asr --language zh
 bili start PLAN_ID --key my-collection
 bili status JOB_ID
 bili export JOB_ID --include-media
@@ -32,7 +32,7 @@ For topic filtering, inspect titles/descriptions and use repeated `--select BV` 
 
 Media policy follows the user: `audio-preferred` saves standalone audio when available, otherwise a combined video with audio; `audio` extracts audio if needed; `video` saves video with sound. Do not claim video frames or diagrams were analyzed by a transcript-only workflow.
 
-Subtitles are preferred. Choose `--asr whisper-cpp` when the user's request authorizes fallback transcription; otherwise the default is `--asr none`. `bili configure --whisper-model /path/to/model.bin` selects an already downloaded local model. Do not silently download large models. `--summarize` explicitly invokes the configured LLM on full transcript chunks, requires the llm extra/API configuration, and may incur provider cost.
+Subtitles are preferred. For authorized local transcription on Apple Silicon, use `--asr qwen3-asr` with Qwen3-ASR 0.6B MLX 8-bit. Configure a local safetensors directory with `bili configure --asr-backend qwen3-asr --asr-model /path/to/Qwen3-ASR-0.6B-8bit`. It requires the PyPI qwen extra and does not load remote model code. New plans inherit the configured backend; unconfigured installs default to `none`, and explicit `--asr none` disables ASR. Existing plans keep their backend. Qwen timestamps are 20-second audio chunk boundaries, not word/sentence alignment; report this limitation. Completed chunks are cached for resume. Keep legacy whisper-cpp only for existing deployments. Do not silently download models or delete old media/transcripts. `--summarize` explicitly invokes the configured LLM on full transcript chunks, requires the llm extra/API configuration, and may incur provider cost.
 
 ## Long jobs and results
 

@@ -35,22 +35,57 @@ class Service:
         self.store = store or Store()
         self.client = client or BiliClient(cookies=load_cookies(self.store.root.parent / "session.json"))
 
+    def settings(self):
+        config = self.store.root / "settings.json"
+        return json.loads(config.read_text(encoding="utf-8")) if config.exists() else {}
+
+    def qwen_model(self):
+        return os.getenv("BILIDIGEST_QWEN_MODEL") or self.settings().get("qwen_model")
+
     def doctor(self):
-        model = Path(self.whisper_model() or "").expanduser()
+        from . import qwen_asr
+        settings = self.settings()
+        backend = settings.get("asr_backend", "whisper-cpp" if self.whisper_model() else "none")
         tools = {name: shutil.which(name) for name in ("ffmpeg", "ffprobe", "whisper-cli")}
-        return {"version": VERSION, "python": sys.version.split()[0], "data_dir": str(self.store.root.parent), "output_dir": str(self.store.output.parent), "executables": tools, "media_ready": bool(tools["ffmpeg"] and tools["ffprobe"]), "asr_ready": bool(tools["whisper-cli"] and model.is_file()), "http_ready": importlib.util.find_spec("fastapi") is not None, "auth_configured": bool(self.client.cookies), "next_steps": ["Use auth status to validate the session", "Set BILIDIGEST_WHISPER_MODEL for local ASR"]}
+        ready = False
+        model = None
+        if backend == "qwen3-asr":
+            model = self.qwen_model()
+            try:
+                qwen_asr.model_config(model)
+                ready = qwen_asr.runtime_ready()
+            except AgentError:
+                pass
+        elif backend == "whisper-cpp":
+            model = self.whisper_model()
+            ready = bool(model and Path(model).is_file() and tools["whisper-cli"])
+        return {"version": VERSION, "python": sys.version.split()[0], "data_dir": str(self.store.root.parent), "output_dir": str(self.store.output.parent), "executables": tools, "media_ready": bool(tools["ffmpeg"] and tools["ffprobe"]), "asr_ready": ready, "asr_backend": backend, "asr_model": model, "qwen_runtime_ready": qwen_asr.runtime_ready(), "timestamp_kind": "chunk_boundaries" if backend == "qwen3-asr" else "model_segments", "http_ready": importlib.util.find_spec("fastapi") is not None, "auth_configured": bool(self.client.cookies), "next_steps": ["Use auth status to validate the session", "Configure a local ASR model if transcription is needed"]}
 
     def whisper_model(self):
-        config = self.store.root / "settings.json"
-        settings = json.loads(config.read_text(encoding="utf-8")) if config.exists() else {}
-        return os.getenv("BILIDIGEST_WHISPER_MODEL") or settings.get("whisper_model")
+        return os.getenv("BILIDIGEST_WHISPER_MODEL") or self.settings().get("whisper_model")
 
-    def configure(self, whisper_model):
-        path = Path(whisper_model).expanduser().resolve()
-        if not path.is_file():
-            raise AgentError("INVALID_MODEL", "The local GGML model file does not exist")
-        atomic_json(self.store.root / "settings.json", {"whisper_model": str(path)})
-        return {"whisper_model": str(path)}
+    def configure(self, whisper_model=None, *, asr_backend=None, asr_model=None):
+        from . import qwen_asr
+        settings = self.settings()
+        if whisper_model:
+            if asr_backend or asr_model:
+                raise AgentError("INVALID_INPUT", "Use either --whisper-model or --asr-backend/--asr-model")
+            asr_backend, asr_model = "whisper-cpp", whisper_model
+        if asr_backend == "qwen3-asr":
+            path, _ = qwen_asr.model_config(asr_model)
+            settings.update(asr_backend=asr_backend, qwen_model=str(path))
+            settings.pop("whisper_model", None)
+        elif asr_backend == "whisper-cpp":
+            path = Path(asr_model or "").expanduser().resolve()
+            if not path.is_file():
+                raise AgentError("INVALID_MODEL", "The local GGML model file does not exist")
+            settings.update(asr_backend=asr_backend, whisper_model=str(path))
+        elif asr_backend == "none" and not asr_model:
+            settings["asr_backend"] = "none"
+        else:
+            raise AgentError("INVALID_INPUT", "Select --asr-backend and a local --asr-model")
+        atomic_json(self.store.root / "settings.json", settings)
+        return {k: settings[k] for k in ("asr_backend", "qwen_model", "whisper_model") if k in settings}
 
     def auth(self, action="status", value=None):
         if action == "import-bilitools":
@@ -79,8 +114,9 @@ class Service:
         result = self.store.resource("snapshots", resource_id)
         return {**result, "items": result["items"][offset:offset + limit], "offset": offset, "next_offset": offset + limit if offset + limit < len(result["items"]) else None}
 
-    def plan(self, snapshot_id, *, select=None, exclude=None, keywords=None, mode="audio-preferred", asr="none", language="auto", summarize=False, allow_partial=False):
-        if mode not in ("audio-preferred", "audio", "video") or asr not in ("none", "whisper-cpp"):
+    def plan(self, snapshot_id, *, select=None, exclude=None, keywords=None, mode="audio-preferred", asr=None, language="auto", summarize=False, allow_partial=False):
+        asr = asr if asr is not None else self.settings().get("asr_backend", "none")
+        if mode not in ("audio-preferred", "audio", "video") or asr not in ("none", "whisper-cpp", "qwen3-asr"):
             raise AgentError("INVALID_INPUT", "Invalid media mode or ASR backend")
         if not language.isalpha() or len(language) > 12:
             raise AgentError("INVALID_INPUT", "Language must be auto or a Whisper language code")
@@ -205,10 +241,15 @@ class Service:
                                 transcript = media.existing_subtitle(self.client, video, page)
                                 part["subtitle_state"] = "available" if transcript else "unavailable"
                                 self.store.save_job(job)
-                            if transcript is None and options["asr"] == "whisper-cpp":
+                            if transcript is None and options["asr"] in ("whisper-cpp", "qwen3-asr"):
                                 part["stage"] = "asr"
                                 self.store.save_job(job)
-                                transcript = media.transcribe(audio, self.store.root / "asr-cache", folder / "work" / key, model=self.whisper_model(), language=options["language"], cancelled=cancelled)
+                                if options["asr"] == "qwen3-asr":
+                                    from . import qwen_asr
+                                    transcriber, model_path = qwen_asr.transcribe, self.qwen_model()
+                                else:
+                                    transcriber, model_path = media.transcribe, self.whisper_model()
+                                transcript = transcriber(audio, self.store.root / "asr-cache", folder / "work" / key, model=model_path, language=options["language"], cancelled=cancelled)
                             if transcript:
                                 media.write_transcript(text_path, transcript, video, page)
                                 part.update(transcript=str(text_path.relative_to(folder)), transcript_sha256=sha256(text_path), transcript_source=transcript["source"], asr_cache_hit=transcript.get("cache_hit", False))
@@ -269,6 +310,7 @@ class Service:
             text = folder / part["transcript"] if part.get("transcript") else None
             if text and text.exists():
                 value = json.loads(text.read_text(encoding="utf-8"))
+                part["timestamp_kind"] = value.get("timestamp_kind", "model_segments")
                 combined.append(text.with_suffix(".md").read_text(encoding="utf-8"))
                 fingerprint = part.get("validation", {}).get("sha256")
                 if fingerprint in seen:
@@ -306,7 +348,7 @@ class Service:
     @staticmethod
     def _chunk(part, window, n):
         start = window[0]["from"]
-        return {"id": f'{part["bvid"]}_{part["cid"]}_{n:06d}', "title": part["title"], "bvid": part["bvid"], "cid": part["cid"], "page": part["page"], "start_seconds": start, "end_seconds": window[-1]["to"], "source_url": part["source_url"] + f"&t={int(start)}", "transcript_source": part["transcript_source"], "text": "\n".join(r["content"] for r in window)}
+        return {"id": f'{part["bvid"]}_{part["cid"]}_{n:06d}', "title": part["title"], "bvid": part["bvid"], "cid": part["cid"], "page": part["page"], "start_seconds": start, "end_seconds": window[-1]["to"], "source_url": part["source_url"] + f"&t={int(start)}", "transcript_source": part["transcript_source"], "timestamp_kind": part.get("timestamp_kind", "model_segments"), "text": "\n".join(r["content"] for r in window)}
 
     def export(self, job_id, *, include_media=False):
         try:

@@ -221,5 +221,7 @@ def write_transcript(path, transcript, video, page):
     for row in body:
         t = int(row["from"])
         lines.append(f'- [{t // 60:02d}:{t % 60:02d}]({url}&t={t}) {row["content"]}')
+    if transcript.get("timestamp_kind") == "chunk_boundaries":
+        lines.insert(4, "时间戳为约20秒音频分段边界，并非逐句或逐字强制对齐。")
     path.with_suffix(".md").write_text("\n".join(lines) + "\n", encoding="utf-8")
     return value

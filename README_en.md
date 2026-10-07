@@ -1,6 +1,8 @@
 # BiliDigest
 
-## Agent tools 0.4
+## Agent tools 0.4.1
+
+Apple Silicon ASR now supports Qwen3-ASR 0.6B MLX 8-bit via the qwen extra, with resumable chunk caching. Timestamps represent approximately 20-second audio boundaries, not word alignment. See [configuration](docs/agent-tools.md).
 
 An installable `bili` JSON CLI and authenticated HTTP/OpenAPI API now share the same collection engine. MCP is not required. Collect UP uploads and all regular video parts, prefer independent audio and existing subtitles, optionally transcribe locally, resume persistent jobs and export knowledge artifacts.
 

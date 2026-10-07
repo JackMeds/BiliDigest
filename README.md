@@ -1,6 +1,8 @@
 # 哔哩摘要笔记
 
-## Agent 工具 0.4
+## Agent 工具 0.4.1
+
+Apple Silicon 本地转写新增 Qwen3-ASR 0.6B MLX 8-bit（`.[qwen]`），支持分段缓存恢复；配置后新计划默认使用Qwen。时间戳为约20秒音频边界，不是逐字对齐。详见 [ASR配置](docs/agent-tools.md)。
 
 现已提供可安装的 `bili` JSON CLI 和带 Bearer 认证的 HTTP API，供有终端或HTTP工具能力的 Agent 调用，不依赖 MCP。支持整 UP 主分页、全部分P、音轨优先、现成字幕、本机缺字幕转写、持久作业与知识库导出。
 
